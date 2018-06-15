@@ -1,2 +1,8 @@
+# These are some of the file formats we will use.
+# They are ignored because GitHub has size limits, and these files are large.
 *.fa
 *.gbk
+
+# These files really don't matter, but my text editor uses them.
+# Thus, they are also ignored.
+*.swp
