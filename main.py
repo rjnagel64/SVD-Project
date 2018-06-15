@@ -26,7 +26,24 @@ def extract_proteins():
     filenames = os.listdir("aa-sequences")
     for fn in filenames:
         record = next(SeqIO.parse(f"aa-sequences/{fn}", "fasta"))
-        # TODO: Do some stuff with this. Actually get the protein sequences out of it.
+
+        index = 0
+        while index != -1 and index < len(record.seq):
+            start_index = record.seq.find("M", index)
+            if start_index == -1:
+                # If we didn't find a start codon, there are no more start codons,
+                # and we are done.
+                break
+            stop_index = record.seq.find("*", start_index)
+            if stop_index == -1:
+                seq = record.seq[start_index:]
+            else:
+                # Plus one so that the protein sequence includes the stop codon.
+                seq = record.seq[start_index:stop_index + 1]
+
+            # TODO: Record this sequence somewhere.
+
+            index = stop_index + 1
 
 def create_matrix():
     pass
