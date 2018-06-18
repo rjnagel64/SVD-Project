@@ -5,7 +5,7 @@ import Bio
 from Bio import Seq
 from Bio import SeqIO
 
-import ftplib
+from ftplib import FTP
 
 import gzip
 
@@ -17,9 +17,6 @@ from shutil import copyfileobj
 # TODO: One of the sequences in the drosophila melanogaster genome (sequence 0)
 # has a length that is not a multiple of three. Biopython suggests appending an
 # 'N' to the end of the sequence to rectify this.
-
-# 1869 sequences for drosophila melanogaster.
-# 63 sequences for thalassiosira pseudonana. Hmm. (But significantly larger on average)
 
 DNA_SEQUENCE_DIR = "dna-sequences"
 PROTEIN_SEQUENCE_DIR = "protein-sequences"
@@ -35,15 +32,15 @@ def main(args):
 def get_data():
     """Retrieve data from the NCBI servers and databanks."""
 
-    files = [
-        # Drosophila melanogaster is a fruit fly.
-        ("genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.gbff.gz",
-        "drosophila_melanogaster.gb.gz"),
-        # Thalassiosira pseudonana is some sort of diatom, with a genome that's
-        # somewhat smaller than Drosophila, but it has more chromosomes.
-        ("genomes/all/GCF/000/149/405/GCF_000149405.2_ASM14940v2/GCF_000149405.2_ASM14940v2_genomic.gbff.gz",
-        "thalassiosira_pseudonana.gb.gz"),
-    ]
+    # The data files we want have information about them stored in 'genomes.txt'.
+    # Perform simple parsing of that file to extract the relevant data.
+    with open("genomes.txt", "r") as f:
+        genomes = f.read()
+
+    # Take only the nonempty, noncomment lines of the file.
+    lines = list(filter(lambda l: l != "" and l[0] != "#", map(str.strip, genomes.splitlines())))
+    # This turns ['a', 'b', 'c', 'd', ...] into [('a', 'b'), ('c', 'd'), ...].
+    files = list(zip(lines[::2], lines[1::2]))
 
     retrieve_files(files, DNA_SEQUENCE_DIR)
 
@@ -63,7 +60,7 @@ def retrieve_files(filepaths, dest_dir):
     if not os.path.exists(dest_dir):
         os.mkdir(dest_dir)
 
-    f = ftplib.FTP("ftp.ncbi.nlm.nih.gov")
+    f = FTP("ftp.ncbi.nlm.nih.gov")
     f.login()
 
     for (fp, fn) in filepaths:

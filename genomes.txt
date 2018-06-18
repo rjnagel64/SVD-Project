@@ -1,0 +1,17 @@
+#
+# This file contains the URLs and filenames of our data files.
+# Lines beginning with a '#' are ignored.
+# Blank lines are also ignored.
+#
+# The general format of this file is:
+# path/to/the/file/on/the/NCBI/FTP/server.gbff.gz
+# local_file_name.gb.gz
+
+# Drosophila melanogaster is a fruit fly.
+genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.gbff.gz
+drosophila_melanogaster.gb.gz
+
+# Thalassiosira pseudonana is some sort of diatom, with a genome that's
+# somewhat smaller than Drosophila, but it has more chromosomes.
+genomes/all/GCF/000/149/405/GCF_000149405.2_ASM14940v2/GCF_000149405.2_ASM14940v2_genomic.gbff.gz
+thalassiosira_pseudonana.gb.gz
