@@ -27,6 +27,7 @@ def main(args):
         get_data()
 
     write_proteins()
+    create_matrix()
 
 
 def get_data():
@@ -174,7 +175,52 @@ def write_proteins():
     print(f"There were {total_proteins} proteins in total, over {num_sequences} sequences.")
 
 def create_matrix():
-    pass
+    # TODO: The class 'Counter' from the standard library module 'collections'
+    # would do nicely for counting proteins.
+    # TODO: Use proper matrix types from numpy/scipy (specifically, 'ndarray')
+
+    import os # Delete this line -- it's already imported earlier in the file.
+    directoryname = "proteins!" # Use 'PROTEIN_SEQUENCE_DIR' instead of this.
+    files = os.listdir(directoryname)
+    allproteins = set()
+
+    for filename in files:
+       #TODO: os.path
+       filepath = os.path.join(directoryname,filename)
+       filestream = open(filepath, "r")
+       for line in filestream:
+           line = line.strip()
+           allproteins.add(line)
+
+        filestream.close() # Remember to close file objects!
+        # Alternatively, use
+        #  with open(filepath, "r") as filestream:
+        #      for line in filestream: ...
+        # To close 'filestream' automatically.
+
+    allproteins = list(allproteins)
+
+    matrix = []
+    realsequence = []
+
+    for filename in files:
+        filepath = os.path.join(directoryname,filename)
+        sequence = open(filepath, "r")
+        for line in sequence:
+           line = line.strip()
+           realsequence.append(line)
+           vector = []
+           for x in allproteins:
+               if x in realsequence:
+                   vector.append("1") # ... Why are the entries of the matrix strings?
+               else:
+                   vector.append("0")
+        matrix.append(vector)
+        vector = []
+        realsequence = []
+
+
+    print('\n'.join(['\t'.join([str(cell) for cell in row]) for row in matrix]))
 
 
 if __name__ == "__main__":
