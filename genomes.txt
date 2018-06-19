@@ -19,3 +19,7 @@ drosophila_melanogaster.gb.gz
 # somewhat smaller than Drosophila, but it has more chromosomes.
 genomes/all/GCF/000/149/405/GCF_000149405.2_ASM14940v2/GCF_000149405.2_ASM14940v2_genomic.gbff.gz
 thalassiosira_pseudonana.gb.gz
+
+# A very small organism.
+genomes/all/GCF/000/027/345/GCF_000027345.1_ASM2734v1/GCF_000027345.1_ASM2734v1_genomic.gbff.gz
+mycoplasma_pneumoniae.gb.gz

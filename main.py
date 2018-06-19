@@ -29,6 +29,8 @@ def main(args):
     write_proteins()
     create_matrix()
 
+    # TODO: Do SVD of the matrix
+
 
 def get_data():
     """Retrieve data from the NCBI servers and databanks."""
@@ -174,6 +176,7 @@ def write_proteins():
 
     print(f"There were {total_proteins} proteins in total, over {num_sequences} sequences.")
 
+# This function should probably return the matrix variable.
 def create_matrix():
     # TODO: The class 'Counter' from the standard library module 'collections'
     # would do nicely for counting proteins.
