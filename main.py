@@ -50,7 +50,7 @@ def get_data():
 # TODO: Error handling if a file does not exist on the server?
 def retrieve_files(filepaths, dest_dir):
     """Retrieve a number of files from GenBank via FTP.
-    
+
     arguments:
     - filepaths: A list of `(file_path, local_name)` pairs, where `file_path` is
         the path to the file on the server, and `local_name` is the name that the
@@ -75,7 +75,7 @@ def retrieve_files(filepaths, dest_dir):
         f.cwd(path)
         with open(os.path.join(dest_dir, fn), "wb") as fd:
             f.retrbinary("RETR " + filename, fd.write)
-    
+
     f.quit()
 
     print("Files downloaded.")
@@ -86,7 +86,7 @@ def retrieve_files(filepaths, dest_dir):
         if ext == ".gz":
             print(f"Decompressing {filename}...")
             compressed_filename = os.path.join(dest_dir, filename)
-            
+
             # Decompress the file and copy its contents into a new file.
             with gzip.open(compressed_filename, "rb") as compressed_file:
                 with open(os.path.join(dest_dir, path), "wb") as decompressed_file:
@@ -106,7 +106,7 @@ def translate_sequences(filename):
 
     arguments:
     - filename: The file containing the DNA sequences, in GenBank format
-    
+
     returns:
     An iterator for the translated sequences.
     """
@@ -116,14 +116,14 @@ def translate_sequences(filename):
 
 def extract_proteins(record):
     """Extract the protein sequences from a translated record.
-    
+
     arguments:
     - record: A translated amino acid sequence
 
     returns:
     An iterator for each protein sequence in the record.
     """
-    
+
     index = 0
     while index != -1 and index < len(record.seq):
         start_index = record.seq.find("M", index)
@@ -182,8 +182,8 @@ def create_matrix():
     # would do nicely for counting proteins.
     # TODO: Use proper matrix types from numpy/scipy (specifically, 'ndarray')
 
-    import os # Delete this line -- it's already imported earlier in the file.
-    directoryname = "proteins!" # Use 'PROTEIN_SEQUENCE_DIR' instead of this.
+    # Delete this line -- it's already imported earlier in the file.
+    directoryname = "PROTEIN_SEQUENCE_DIR" # Use 'PROTEIN_SEQUENCE_DIR' instead of this.
     files = os.listdir(directoryname)
     allproteins = set()
 
@@ -195,11 +195,7 @@ def create_matrix():
            line = line.strip()
            allproteins.add(line)
 
-        filestream.close() # Remember to close file objects!
-        # Alternatively, use
-        #  with open(filepath, "r") as filestream:
-        #      for line in filestream: ...
-        # To close 'filestream' automatically.
+       filestream.close()
 
     allproteins = list(allproteins)
 
@@ -214,10 +210,8 @@ def create_matrix():
            realsequence.append(line)
            vector = []
            for x in allproteins:
-               if x in realsequence:
-                   vector.append("1") # ... Why are the entries of the matrix strings?
-               else:
-                   vector.append("0")
+               cnt = realsequence.count(x)
+               vector.append(cnt)
         matrix.append(vector)
         vector = []
         realsequence = []
