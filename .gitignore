@@ -5,8 +5,8 @@
 
 # These directories will contain those large files, so just ignore all the
 # stuff in those directories.
-aa-sequences/
 dna-sequences/
+protein-sequences/
 
 # These files really don't matter, but my text editor uses them.
 # Thus, they are also ignored.
