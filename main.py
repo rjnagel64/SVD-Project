@@ -251,12 +251,11 @@ def create_matrix():
         vector = []
         realsequence = []
 
-
     print('\n'.join(['\t'.join([str(cell) for cell in row]) for row in matrix]))
 
 def create_matrix2():
     """Create the term-document matrix.
-    
+
     returns:
     A tuple `(mat, proteins, genomes)` such that:
     - `mat` is a numpy ndarray.
