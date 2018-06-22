@@ -27,13 +27,15 @@ PROTEIN_SEQUENCE_DIR = "protein-sequences"
 
 def main(args):
     # Only download the files if we don't already have them.
-    if not os.path.exists(DNA_SEQUENCE_DIR):
-        get_data()
+    #  if not os.path.exists(DNA_SEQUENCE_DIR):
+        #  get_data()
 
-    write_proteins()
-    (mat, proteins, genomes) = create_matrix2()
+    #  write_proteins()
+    #  (mat, proteins, genomes) = create_matrix2()
 
-    print(mat.shape)
+    #  print(mat.shape)
+
+    new_extract_proteins("dna-sequences/drosophila_melanogaster.gb")
 
     # TODO: Do SVD of the matrix
 
@@ -120,31 +122,31 @@ def translate_sequences(filename):
         print(f"Translating sequence {i} of {filename}...")
         yield record.translate()
 
-def extract_proteins(record):
+def extract_proteins(sequence):
     """Extract the protein sequences from a translated record.
 
     arguments:
-    - record: A translated amino acid sequence
+    - sequence: A translated amino acid sequence
 
     returns:
     An iterator for each protein sequence in the record.
     """
 
     index = 0
-    while index != -1 and index < len(record.seq):
-        start_index = record.seq.find("M", index)
+    while index != -1 and index < len(sequence):
+        start_index = sequence.find("M", index)
         if start_index == -1:
             # If we didn't find a start codon, there are no more start codons,
             # and we are done.
             break
 
-        stop_index = record.seq.find("*", start_index)
+        stop_index = sequence.find("*", start_index)
         if stop_index == -1:
             # If a sequence ends without the stop codon, it's not a protein.
             return
         else:
             # Plus one so that the protein sequence includes the stop codon.
-            seq = str(record.seq[start_index:stop_index + 1])
+            seq = str(sequence[start_index:stop_index + 1])
 
         yield seq
 
@@ -173,7 +175,7 @@ def write_proteins():
                 num_proteins = 0
                 num_sequences += 1
 
-                for protein in extract_proteins(record):
+                for protein in extract_proteins(record.seq):
                     num_proteins += 1
                     f.write(protein + "\n")
 
@@ -262,6 +264,32 @@ def create_matrix2():
 
     return (mat, proteins, genomes)
 
+
+def new_extract_proteins(filename):
+    count = 0
+    for (i, record) in enumerate(SeqIO.parse(filename, "genbank")):
+        exons = [f for f in record.features if f.type == "exon"]
+        cdss = [f for f in record.features if f.type == "CDS"]
+        both = [f for f in record.features if f.type in ("exon", "CDS")]
+
+        features = cdss
+
+        r = Seq.MutableSeq("")
+
+        print(f"Splicing record {i}...")
+        for f in features:
+            r.extend(record.seq[f.location.start.position : f.location.end.position + 1])
+
+        print(f"Translating record {i}...")
+        r = r.toseq().translate()
+
+        print(f"Extracting from record {i}...")
+        for p in extract_proteins(r):
+            #  print(p)
+            count += 1
+
+    #  print(f"{count} proteins found using exon")
+    print(f"{count} proteins found using cds")
 
 if __name__ == "__main__":
     from sys import argv
