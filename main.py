@@ -189,7 +189,7 @@ def write_proteins():
         (basename, ext) = os.path.splitext(filename)
 
         # Ignore files not in the genbank format.
-        if ext != ".gb":
+        if ext not in (".gb", ".gbk"):
             continue
 
         print(f"Processing file {filename}...")

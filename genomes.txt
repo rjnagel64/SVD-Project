@@ -24,14 +24,18 @@ thalassiosira_pseudonana.gb.gz
 genomes/all/GCF/000/027/345/GCF_000027345.1_ASM2734v1/GCF_000027345.1_ASM2734v1_genomic.gbff.gz
 mycoplasma_pneumoniae.gb.gz
 
-##some virus?
+# Some virus?
 genomes/Viruses/acinetobacter_phage_acj61_uid60117/NC_014661.gbk
+acinetobacter_phage.gb
 
-##Virus
+# Another virus.
 genomes/Viruses/acartia_tonsa_copepod_circovirus_uid186432/NC_020099.gbk
+acartia_tonsa_copepod_circovirus.gb
 
-##Virus
+# Another virus.
 genomes/Viruses/aeromonas_phage_vb_asam_56_uid181214/NC_019527.gbk
+aeromonas_phage.gb
 
-##Virus
+# Yet another virus.
 genomes/Viruses/australian_bat_lyssavirus_uid14730/NC_003243.gbk
+australian_bat_lyssavirus.gb
