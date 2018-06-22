@@ -1,3 +1,4 @@
+import numpy
 import os
 directoryname = "proteins!"
 files = os.listdir(directoryname)
@@ -24,13 +25,13 @@ for filename in files:
        realsequence.append(line)
        vector = []
        for x in allproteins:
-           if x in realsequence:
-               vector.append("1")
-           else:
-               vector.append("0")
+           cnt = realsequence.count(x)
+           vector.append(cnt)
     matrix.append(vector)
     vector = []
     realsequence = []
 
-
-print('\n'.join(['\t'.join([str(cell) for cell in row]) for row in matrix]))
+matrix = numpy.array(matrix)
+final = open("matrix.bin", "w")
+matrix.tofile(final, "bw")
+final.close()
