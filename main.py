@@ -222,7 +222,7 @@ def create_matrix():
 
 
     matrix=numpy.array(matrix)
-    numpy.save("matrix.npy")
+    numpy.save("matrix.npy", matrix)
 
 def create_matrix2():
     """Create the term-document matrix.
