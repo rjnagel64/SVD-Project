@@ -221,8 +221,8 @@ def create_matrix():
         realsequence = []
 
 
-    print('\n'.join(['\t'.join([str(cell) for cell in row]) for row in matrix]))
-
+    matrix=numpy.array(matrix)
+    numpy.save("matrix.npy")
 
 def create_matrix2():
     """Create the term-document matrix.
