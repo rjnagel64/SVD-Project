@@ -1,0 +1,10 @@
+import os
+proteins= os.listdr()
+allproteins=set()
+
+for k in proteins:
+	allproteins= allproteins|(Set(open(k, "r")))
+
+  break
+
+  allproteins=list(allproteins)
