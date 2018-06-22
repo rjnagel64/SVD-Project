@@ -266,19 +266,30 @@ def create_matrix2():
 
 
 def new_extract_proteins(filename):
-    for record in SeqIO.parse(filename, "genbank"):
+    count = 0
+    for (i, record) in enumerate(SeqIO.parse(filename, "genbank")):
         exons = [f for f in record.features if f.type == "exon"]
+        cdss = [f for f in record.features if f.type == "CDS"]
+        both = [f for f in record.features if f.type in ("exon", "CDS")]
 
-        r = ""
+        features = cdss
 
-        for e in exons:
-            r += record.seq[e.location.start.position : e.location.end.position + 1].translate()
+        r = Seq.MutableSeq("")
 
-        count = 0
+        print(f"Splicing record {i}...")
+        for f in features:
+            r.extend(record.seq[f.location.start.position : f.location.end.position + 1])
+
+        print(f"Translating record {i}...")
+        r = r.toseq().translate()
+
+        print(f"Extracting from record {i}...")
         for p in extract_proteins(r):
+            #  print(p)
             count += 1
 
-        print(f"{count} proteins found using exon")
+    #  print(f"{count} proteins found using exon")
+    print(f"{count} proteins found using cds")
 
 if __name__ == "__main__":
     from sys import argv
