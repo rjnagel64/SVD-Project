@@ -24,21 +24,37 @@ from shutil import copyfileobj
 
 DNA_SEQUENCE_DIR = "dna-sequences"
 PROTEIN_SEQUENCE_DIR = "protein-sequences"
+MATRIX_SAVE_DIR = "matrix"
 
 def main(args):
     # Only download the files if we don't already have them.
-    #  if not os.path.exists(DNA_SEQUENCE_DIR):
-        #  get_data()
+    if not os.path.exists(DNA_SEQUENCE_DIR):
+        get_data()
 
-    #  write_proteins()
-    #  (mat, proteins, genomes) = create_matrix2()
+    write_proteins()
 
-    #  print(mat.shape)
+    print("Creating matrix...")
+    (mat, proteins, genomes) = create_matrix2()
 
-    new_extract_proteins("dna-sequences/drosophila_melanogaster.gb")
+    print(mat.shape)
+
+    print("Saving data...")
+    save_data(mat, proteins, genomes)
 
     # TODO: Do SVD of the matrix
 
+def save_data(mat, proteins, genomes):
+    """Save the term-document matrix into the subdirectory `MATRIX_SAVE_DIR`."""
+    if not os.path.exists(MATRIX_SAVE_DIR):
+        os.mkdir("matrix")
+
+    np.save(os.path.join(MATRIX_SAVE_DIR, "matrix.npy"), mat)
+
+    with open(os.path.join(MATRIX_SAVE_DIR, "proteins.txt"), "w") as f:
+        f.writelines(proteins)
+
+    with open(os.path.join(MATRIX_SAVE_DIR, "genomes.txt"), "w") as f:
+        f.writelines(genomes)
 
 def get_data():
     """Retrieve data from the NCBI servers and databanks."""
@@ -116,20 +132,31 @@ def translate_sequences(filename):
     - filename: The file containing the DNA sequences, in GenBank format
 
     returns:
-    An iterator for the translated sequences.
+    An iterator for the translated sequences, after non-coding regions are
+    removed.
     """
     for (i, record) in enumerate(SeqIO.parse(filename, "genbank")):
         print(f"Translating sequence {i} of {filename}...")
-        yield record.translate()
+
+        features = [f for f in record.features if f.type in ("exon", "CDS")]
+        print(f"record {i}: {len(features)} features.")
+
+        r = Seq.MutableSeq("")
+
+        print(f"Splicing record {i}...")
+        for f in features:
+            r.extend(f.extract(record.seq))
+
+        yield r.toseq().translate()
 
 def extract_proteins(sequence):
-    """Extract the protein sequences from a translated record.
+    """Extract the protein sequences from a translated sequence.
 
     arguments:
     - sequence: A translated amino acid sequence
 
     returns:
-    An iterator for each protein sequence in the record.
+    An iterator for each protein sequence in the translated sequence.
     """
 
     index = 0
@@ -157,9 +184,7 @@ def write_proteins():
     if not os.path.exists(PROTEIN_SEQUENCE_DIR):
         os.mkdir(PROTEIN_SEQUENCE_DIR)
 
-    total_proteins = 0
-    num_sequences = 0
-
+    totals = Counter()
     for filename in os.listdir(DNA_SEQUENCE_DIR):
         (basename, ext) = os.path.splitext(filename)
 
@@ -169,20 +194,24 @@ def write_proteins():
 
         print(f"Processing file {filename}...")
 
+        counter = Counter()
         with open(os.path.join(PROTEIN_SEQUENCE_DIR, basename), "w") as f:
-            for (i, record) in enumerate(translate_sequences(os.path.join(DNA_SEQUENCE_DIR, filename))):
+            for (i, seq) in enumerate(translate_sequences(os.path.join(DNA_SEQUENCE_DIR, filename))):
                 print(f"Extracting proteins from sequence number {i}...")
-                num_proteins = 0
-                num_sequences += 1
 
-                for protein in extract_proteins(record.seq):
-                    num_proteins += 1
+                for protein in extract_proteins(seq):
                     f.write(protein + "\n")
+                    counter[protein] += 1
 
-                print(f"\t{num_proteins} proteins in that sequence.")
-                total_proteins += num_proteins
+        num_proteins = sum(counter.values())
+        num_unique = len(counter.keys())
+        print(f"This file contained {num_proteins} proteins, of which {num_unique} were unique.")
+        totals.update(counter)
 
-    print(f"There were {total_proteins} proteins in total, over {num_sequences} sequences.")
+    total_proteins = sum(totals.values())
+    total_unique = len(totals.keys())
+    print(f"In total, there were {total_proteins} proteins, of which {total_unique} were unique.")
+
 
 # This function should probably return the matrix variable.
 def create_matrix():
@@ -225,7 +254,6 @@ def create_matrix():
 
     print('\n'.join(['\t'.join([str(cell) for cell in row]) for row in matrix]))
 
-
 def create_matrix2():
     """Create the term-document matrix.
     
@@ -263,33 +291,6 @@ def create_matrix2():
         proteins.append(protein)
 
     return (mat, proteins, genomes)
-
-
-def new_extract_proteins(filename):
-    count = 0
-    for (i, record) in enumerate(SeqIO.parse(filename, "genbank")):
-        exons = [f for f in record.features if f.type == "exon"]
-        cdss = [f for f in record.features if f.type == "CDS"]
-        both = [f for f in record.features if f.type in ("exon", "CDS")]
-
-        features = cdss
-
-        r = Seq.MutableSeq("")
-
-        print(f"Splicing record {i}...")
-        for f in features:
-            r.extend(record.seq[f.location.start.position : f.location.end.position + 1])
-
-        print(f"Translating record {i}...")
-        r = r.toseq().translate()
-
-        print(f"Extracting from record {i}...")
-        for p in extract_proteins(r):
-            #  print(p)
-            count += 1
-
-    #  print(f"{count} proteins found using exon")
-    print(f"{count} proteins found using cds")
 
 if __name__ == "__main__":
     from sys import argv
