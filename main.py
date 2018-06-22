@@ -5,6 +5,10 @@ import Bio
 from Bio import Seq
 from Bio import SeqIO
 
+import numpy as np
+
+from collections import Counter
+
 from ftplib import FTP
 
 import gzip
@@ -27,7 +31,9 @@ def main(args):
         get_data()
 
     write_proteins()
-    create_matrix()
+    (mat, proteins, genomes) = create_matrix2()
+
+    print(mat.shape)
 
     # TODO: Do SVD of the matrix
 
@@ -182,14 +188,12 @@ def create_matrix():
     # would do nicely for counting proteins.
     # TODO: Use proper matrix types from numpy/scipy (specifically, 'ndarray')
 
-    # Delete this line -- it's already imported earlier in the file.
-    directoryname = "PROTEIN_SEQUENCE_DIR" # Use 'PROTEIN_SEQUENCE_DIR' instead of this.
-    files = os.listdir(directoryname)
+    files = os.listdir(PROTEIN_SEQUENCE_DIR)
     allproteins = set()
 
     for filename in files:
        #TODO: os.path
-       filepath = os.path.join(directoryname,filename)
+       filepath = os.path.join(PROTEIN_SEQUENCE_DIR,filename)
        filestream = open(filepath, "r")
        for line in filestream:
            line = line.strip()
@@ -203,7 +207,7 @@ def create_matrix():
     realsequence = []
 
     for filename in files:
-        filepath = os.path.join(directoryname,filename)
+        filepath = os.path.join(PROTEIN_SEQUENCE_DIR,filename)
         sequence = open(filepath, "r")
         for line in sequence:
            line = line.strip()
@@ -218,6 +222,45 @@ def create_matrix():
 
 
     print('\n'.join(['\t'.join([str(cell) for cell in row]) for row in matrix]))
+
+
+def create_matrix2():
+    """Create the term-document matrix.
+    
+    returns:
+    A tuple `(mat, proteins, genomes)` such that:
+    - `mat` is a numpy ndarray.
+    - `proteins` is the list of all protein sequences such that the `i`th row
+        of `mat` corresponds to `proteins[i]`.
+    - `genomes` is the list of genome names such that the `j`th column of `mat`
+        corresponds to `genomes[j]`."""
+    # `counters` associates each filename with a `Counter` of all the proteins
+    # in that file.
+    counters = {}
+    for filename in os.listdir(PROTEIN_SEQUENCE_DIR):
+        with open(os.path.join(PROTEIN_SEQUENCE_DIR, filename), "r") as f:
+            counters[filename] = Counter(f)
+
+    # Now, get a set of all the proteins (from all the files)
+    all_proteins = set()
+    for (filename, counter) in counters.items():
+        for protein in counter.keys():
+            all_proteins.add(protein)
+
+    proteins = []
+    genomes = list(counters.keys())
+    mat = np.zeros((len(all_proteins), len(counters.keys())))
+
+    # Put the genomes on the outside loop so we have a few long iterations
+    # instead of many short iterations
+    for (j, (genome, counter)) in enumerate(counters.items()):
+        for (i, protein) in enumerate(all_proteins):
+            # If a key is not found in a counter, it defaults to zero.
+            mat[i, j] = counter[protein]
+
+        proteins.append(protein)
+
+    return (mat, proteins, genomes)
 
 
 if __name__ == "__main__":
