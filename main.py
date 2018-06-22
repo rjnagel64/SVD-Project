@@ -5,6 +5,10 @@ import Bio
 from Bio import Seq
 from Bio import SeqIO
 
+import numpy as np
+
+from collections import Counter
+
 from ftplib import FTP
 
 import gzip
@@ -23,11 +27,15 @@ PROTEIN_SEQUENCE_DIR = "protein-sequences"
 
 def main(args):
     # Only download the files if we don't already have them.
-    if not os.path.exists(DNA_SEQUENCE_DIR):
-        get_data()
+    #  if not os.path.exists(DNA_SEQUENCE_DIR):
+        #  get_data()
 
-    write_proteins()
-    create_matrix()
+    #  write_proteins()
+    #  (mat, proteins, genomes) = create_matrix2()
+
+    #  print(mat.shape)
+
+    new_extract_proteins("dna-sequences/drosophila_melanogaster.gb")
 
     # TODO: Do SVD of the matrix
 
@@ -114,31 +122,31 @@ def translate_sequences(filename):
         print(f"Translating sequence {i} of {filename}...")
         yield record.translate()
 
-def extract_proteins(record):
+def extract_proteins(sequence):
     """Extract the protein sequences from a translated record.
 
     arguments:
-    - record: A translated amino acid sequence
+    - sequence: A translated amino acid sequence
 
     returns:
     An iterator for each protein sequence in the record.
     """
 
     index = 0
-    while index != -1 and index < len(record.seq):
-        start_index = record.seq.find("M", index)
+    while index != -1 and index < len(sequence):
+        start_index = sequence.find("M", index)
         if start_index == -1:
             # If we didn't find a start codon, there are no more start codons,
             # and we are done.
             break
 
-        stop_index = record.seq.find("*", start_index)
+        stop_index = sequence.find("*", start_index)
         if stop_index == -1:
             # If a sequence ends without the stop codon, it's not a protein.
             return
         else:
             # Plus one so that the protein sequence includes the stop codon.
-            seq = str(record.seq[start_index:stop_index + 1])
+            seq = str(sequence[start_index:stop_index + 1])
 
         yield seq
 
@@ -167,7 +175,7 @@ def write_proteins():
                 num_proteins = 0
                 num_sequences += 1
 
-                for protein in extract_proteins(record):
+                for protein in extract_proteins(record.seq):
                     num_proteins += 1
                     f.write(protein + "\n")
 
@@ -182,14 +190,12 @@ def create_matrix():
     # would do nicely for counting proteins.
     # TODO: Use proper matrix types from numpy/scipy (specifically, 'ndarray')
 
-    # Delete this line -- it's already imported earlier in the file.
-    directoryname = "PROTEIN_SEQUENCE_DIR" # Use 'PROTEIN_SEQUENCE_DIR' instead of this.
-    files = os.listdir(directoryname)
+    files = os.listdir(PROTEIN_SEQUENCE_DIR)
     allproteins = set()
 
     for filename in files:
        #TODO: os.path
-       filepath = os.path.join(directoryname,filename)
+       filepath = os.path.join(PROTEIN_SEQUENCE_DIR,filename)
        filestream = open(filepath, "r")
        for line in filestream:
            line = line.strip()
@@ -203,7 +209,7 @@ def create_matrix():
     realsequence = []
 
     for filename in files:
-        filepath = os.path.join(directoryname,filename)
+        filepath = os.path.join(PROTEIN_SEQUENCE_DIR,filename)
         sequence = open(filepath, "r")
         for line in sequence:
            line = line.strip()
@@ -217,8 +223,73 @@ def create_matrix():
         realsequence = []
 
 
-    print('\n'.join(['\t'.join([str(cell) for cell in row]) for row in matrix]))
+    matrix=numpy.array(matrix)
+    numpy.save("matrix.npy", matrix)
 
+def create_matrix2():
+    """Create the term-document matrix.
+
+    returns:
+    A tuple `(mat, proteins, genomes)` such that:
+    - `mat` is a numpy ndarray.
+    - `proteins` is the list of all protein sequences such that the `i`th row
+        of `mat` corresponds to `proteins[i]`.
+    - `genomes` is the list of genome names such that the `j`th column of `mat`
+        corresponds to `genomes[j]`."""
+    # `counters` associates each filename with a `Counter` of all the proteins
+    # in that file.
+    counters = {}
+    for filename in os.listdir(PROTEIN_SEQUENCE_DIR):
+        with open(os.path.join(PROTEIN_SEQUENCE_DIR, filename), "r") as f:
+            counters[filename] = Counter(f)
+
+    # Now, get a set of all the proteins (from all the files)
+    all_proteins = set()
+    for (filename, counter) in counters.items():
+        for protein in counter.keys():
+            all_proteins.add(protein)
+
+    proteins = []
+    genomes = list(counters.keys())
+    mat = np.zeros((len(all_proteins), len(counters.keys())))
+
+    # Put the genomes on the outside loop so we have a few long iterations
+    # instead of many short iterations
+    for (j, (genome, counter)) in enumerate(counters.items()):
+        for (i, protein) in enumerate(all_proteins):
+            # If a key is not found in a counter, it defaults to zero.
+            mat[i, j] = counter[protein]
+
+        proteins.append(protein)
+
+    return (mat, proteins, genomes)
+
+
+def new_extract_proteins(filename):
+    count = 0
+    for (i, record) in enumerate(SeqIO.parse(filename, "genbank")):
+        exons = [f for f in record.features if f.type == "exon"]
+        cdss = [f for f in record.features if f.type == "CDS"]
+        both = [f for f in record.features if f.type in ("exon", "CDS")]
+
+        features = cdss
+
+        r = Seq.MutableSeq("")
+
+        print(f"Splicing record {i}...")
+        for f in features:
+            r.extend(record.seq[f.location.start.position : f.location.end.position + 1])
+
+        print(f"Translating record {i}...")
+        r = r.toseq().translate()
+
+        print(f"Extracting from record {i}...")
+        for p in extract_proteins(r):
+            #  print(p)
+            count += 1
+
+    #  print(f"{count} proteins found using exon")
+    print(f"{count} proteins found using cds")
 
 if __name__ == "__main__":
     from sys import argv
