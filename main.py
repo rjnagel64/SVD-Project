@@ -294,3 +294,5 @@ def new_extract_proteins(filename):
 if __name__ == "__main__":
     from sys import argv
     main(argv)
+
+    #test
