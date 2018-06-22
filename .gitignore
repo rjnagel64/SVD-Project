@@ -7,6 +7,7 @@
 # stuff in those directories.
 dna-sequences/
 protein-sequences/
+matrix/
 
 # These files really don't matter, but my text editor uses them.
 # Thus, they are also ignored.
