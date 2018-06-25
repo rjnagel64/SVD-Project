@@ -6,6 +6,9 @@ from Bio import Seq
 from Bio import SeqIO
 
 import numpy as np
+#  from scipy import linalg
+from scipy import sparse
+from scipy.sparse import linalg
 
 from collections import Counter
 
@@ -27,28 +30,60 @@ PROTEIN_SEQUENCE_DIR = "protein-sequences"
 MATRIX_SAVE_DIR = "matrix"
 
 def main(args):
+    (mat, proteins, genomes) = get_matrix()
+
+    print(mat.shape)
+
+    # TODO: Do SVD of the matrix
+    (W, ss, Vh) = sparse.linalg.svds(mat, k=2)
+    print(ss)
+    print(Vh)
+
+def get_matrix():
+    """Obtain the term-document matrix, either by loading from a file or creating
+    from scratch."""
+    # If the matrix already exists, just load it.
+    if os.path.exists(MATRIX_SAVE_DIR):
+        print(f"Loading matrix from save...")
+        mat = sparse.load_npz(os.path.join(MATRIX_SAVE_DIR, "matrix.npz"))
+
+        print(f"Loading proteins from save...")
+        with open(os.path.join(MATRIX_SAVE_DIR, "proteins.txt"), "r") as f:
+            proteins = list(f)
+
+        print(f"Loading genomes from save...")
+        with open(os.path.join(MATRIX_SAVE_DIR, "genomes.txt"), "r") as f:
+            genomes = list(f)
+
+        print(f"Matrix loaded.")
+        return (mat, proteins, genomes)
+
+    # Otherwise, the matrix must be created.
+    print(f"Creating term-document matrix...")
+
     # Only download the files if we don't already have them.
     if not os.path.exists(DNA_SEQUENCE_DIR):
         get_data()
 
     write_proteins()
 
-    print("Creating matrix...")
+    print("Constructing matrix...")
     (mat, proteins, genomes) = create_matrix2()
 
-    print(mat.shape)
+    print(f"Matrix created: {mat.shape}.")
 
     print("Saving data...")
     save_data(mat, proteins, genomes)
 
-    # TODO: Do SVD of the matrix
+    return (mat, proteins, genomes)
 
 def save_data(mat, proteins, genomes):
     """Save the term-document matrix into the subdirectory `MATRIX_SAVE_DIR`."""
     if not os.path.exists(MATRIX_SAVE_DIR):
         os.mkdir("matrix")
 
-    np.save(os.path.join(MATRIX_SAVE_DIR, "matrix.npy"), mat)
+    #  np.save(os.path.join(MATRIX_SAVE_DIR, "matrix.npy"), mat)
+    sparse.save_npz(os.path.join(MATRIX_SAVE_DIR, "matrix.npz"), mat)
 
     with open(os.path.join(MATRIX_SAVE_DIR, "proteins.txt"), "w") as f:
         f.writelines(proteins)
@@ -258,7 +293,7 @@ def create_matrix2():
 
     returns:
     A tuple `(mat, proteins, genomes)` such that:
-    - `mat` is a numpy ndarray.
+    - `mat` is a scipy sparse array.
     - `proteins` is the list of all protein sequences such that the `i`th row
         of `mat` corresponds to `proteins[i]`.
     - `genomes` is the list of genome names such that the `j`th column of `mat`
@@ -291,7 +326,7 @@ def create_matrix2():
             if j == 0:
                 proteins.append(protein)
 
-    return (mat, proteins, genomes)
+    return (sparse.csr_matrix(mat), proteins, genomes)
 
 if __name__ == "__main__":
     from sys import argv
