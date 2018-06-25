@@ -6,7 +6,7 @@ from Bio import Seq
 from Bio import SeqIO
 
 import numpy as np
-#  from scipy import linalg
+from scipy import linalg as dense_linalg
 from scipy import sparse
 from scipy.sparse import linalg
 
@@ -21,6 +21,11 @@ import os.path
 
 from shutil import copyfileobj
 
+# TODO: Add an optional normalization step to matrix creation.
+#   * Create a new function, `normalize(mat, proteins, genomes)`?
+
+# TODO: Create visualization of the rank 2 approximation using matplotlib.
+
 # TODO: One of the sequences in the drosophila melanogaster genome (sequence 0)
 # has a length that is not a multiple of three. Biopython suggests appending an
 # 'N' to the end of the sequence to rectify this.
@@ -34,8 +39,7 @@ def main(args):
 
     print(mat.shape)
 
-    # TODO: Do SVD of the matrix
-    (W, ss, Vh) = sparse.linalg.svds(mat, k=2)
+    (W, ss, Vh) = sparse.linalg.svds(mat, k=2, which="LM")
     print(ss)
     print(Vh)
 
@@ -63,9 +67,12 @@ def get_matrix():
 
     # Only download the files if we don't already have them.
     if not os.path.exists(DNA_SEQUENCE_DIR):
+        print(f"Acquiring data...")
         get_data()
 
-    write_proteins()
+    if not os.path.exists(PROTEIN_SEQUENCE_DIR):
+        print(f"Writing proteins...")
+        write_proteins()
 
     print("Constructing matrix...")
     (mat, proteins, genomes) = create_matrix2()
