@@ -287,7 +287,9 @@ def create_matrix2():
             # If a key is not found in a counter, it defaults to zero.
             mat[i, j] = counter[protein]
 
-        proteins.append(protein)
+            # Only build the list of proteins once.
+            if j == 0:
+                proteins.append(protein)
 
     return (mat, proteins, genomes)
 
