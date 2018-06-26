@@ -5,6 +5,7 @@ import Bio
 from Bio import Seq
 from Bio import SeqIO
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import linalg as dense_linalg
 from scipy import sparse
@@ -23,6 +24,7 @@ from shutil import copyfileobj
 
 # TODO: Add an optional normalization step to matrix creation.
 #   * Create a new function, `normalize(mat, proteins, genomes)`?
+#   * Do TF-IDF normalization as one option
 
 # TODO: Create visualization of the rank 2 approximation using matplotlib.
 
@@ -42,6 +44,67 @@ def main(args):
     (W, ss, Vh) = sparse.linalg.svds(mat, k=2, which="LM")
     print(ss)
     print(Vh)
+
+    create_plot(mat, ss, Vh)
+
+def create_plot(mat, ss, Vh):
+    """Create a scatter plot of words in the new basis
+
+    arguments:
+    - mat: The term-document matrix
+    - ss: Singular values (not used? may remove this parameter)
+    - Vh: The matrix on the right in SVD. It forms a basis for V
+    """
+
+    print(f"Creating plot...")
+    s0, s1 = ss[0:2]
+
+    # The rows of Vh form a basis in the new space. I am keeping them as a matrix
+    # so that I can transform points into this new basis via multiplication.
+    new_basis = Vh[0:2]
+
+    # (2 * 7) @ (N * 7).T = (2 * N)
+
+    # TODO: Get rid of outliers.
+    # There is only one point with y > 1000 (~y = 4000)
+    # Almost all points lie between x = -25 and x = 25
+    # Also, the massive number of points is interesting for PDF renderers to deal
+    # with.
+
+    # Transform each point with matrix multiplication.
+    xs, ys = new_basis @ mat.transpose()
+    # Unfortunately, matplotlib insists on the inputs to the scatter plot function
+    # being two separate lists of coordinates. (Not iterators, lists. *sigh*)
+    xs = list(xs)
+    ys = list(ys)
+
+    new_xs = []
+    new_ys = []
+    for (x, y) in zip(xs, ys):
+        if x < -25 or x > 25 or y > 700:
+            continue
+        else:
+            new_xs.append(x)
+            new_ys.append(y)
+
+
+    (fig, ax) = plt.subplots()
+
+    # TODO: Set axis labels
+    # ax.set_xlabel(...)
+    # ax.set_ylabel(...)
+
+    ax.scatter(
+        new_xs,
+        new_ys,
+        s=2,
+    )
+
+    # TODO: Add labels to some important points?
+    # Probably not. Amino acid sequences make terrible labels.
+
+    print(f"Saving plot...")
+    plt.savefig("test.pdf", format="pdf")
 
 def get_matrix():
     """Obtain the term-document matrix, either by loading from a file or creating
