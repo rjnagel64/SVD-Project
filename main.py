@@ -398,6 +398,57 @@ def create_matrix2():
 
     return (sparse.csr_matrix(mat), proteins, genomes)
 
+def inverse_frequency(m):
+    empty = []
+    another = []
+    counter = 0
+    numcols = len(m[0])
+    m = m.tranpose()
+    for column in m:
+        denominator = sum(m[column])
+        for entry in column:
+            numerator = m.item(column,entry)
+            tf = numerator/denominator
+            empty = empty.append(tf)
+    for column in m:
+        for entry in column:
+            i = m.item(column,entry)
+            if (i > 0):
+                counter = counter + 1
+                continue
+            elif (column = numcols):
+                counter = 0
+                pass
+            else:
+                pass
+        idf = log10(numcols / counter)
+        tf-idf = tf * idf
+        if (column >= numcols):
+            another = another.append(tf-idf)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
     from sys import argv
     main(argv)
