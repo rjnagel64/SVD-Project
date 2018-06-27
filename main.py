@@ -45,9 +45,11 @@ def main(args):
     print(ss)
     print(Vh)
 
-    create_plot(mat, ss, Vh)
+    mat = inverse_frequency(mat)
 
-def create_plot(mat, ss, Vh):
+    create_plot(mat, ss, Vh, name="test2.pdf")
+
+def create_plot(mat, ss, Vh, name="test.pdf"):
     """Create a scatter plot of words in the new basis
 
     arguments:
@@ -81,7 +83,8 @@ def create_plot(mat, ss, Vh):
     new_xs = []
     new_ys = []
     for (x, y) in zip(xs, ys):
-        if x < -25 or x > 25 or y > 700:
+        #  if x < -25 or x > 25 or y > 700:
+        if False:
             continue
         else:
             new_xs.append(x)
@@ -104,7 +107,7 @@ def create_plot(mat, ss, Vh):
     # Probably not. Amino acid sequences make terrible labels.
 
     print(f"Saving plot...")
-    plt.savefig("test.pdf", format="pdf")
+    plt.savefig(name, format="pdf")
 
 def get_matrix():
     """Obtain the term-document matrix, either by loading from a file or creating
@@ -409,25 +412,24 @@ def inverse_frequency(mat):
     Another matrix with shape `(n, m)`, where each element is the term frequency-
     inverse document frequency of that word and document."""
     # Using the raw-count definition of term frequency, tf(t, d) is just
-    # m[t, d].
+    # mat[t, d].
 
-    # This compares each element of `m` to zero, and creates a matrix where
+    # This compares each element of `mat` to zero, and creates a matrix where
     # `nonzero[i, j] = (mat[i, j] != 0)`.
     nonzero = mat != 0
     # This counts how many `True` values were in each row of `nonzero` -- that
     # is, how many nonzero values were in that row of `mat`.
     # `counts` is an `n x 1` matrix.
-    counts = nonzero.sum(axis=0)
+    counts = nonzero.sum(axis=1)
     # To get the inverse document frequency, the number of documents is divided
     # by each count, and then the logarithm is taken.
     # `idf` is also an `n x 1` matrix.
-    idf = np.log(m.shape[1] / counts)
+    idf = np.log(mat.shape[1] / counts)
 
-    # Since `idf` is the smaller matrix, it is broadcast to the size of `mat`.
-    # Then, multiplication occurs elementwise. The end result is that each row
-    # of `mat` is multiplied by the corresponding value in `idf`.
-    # (Also, since the term frequency is just `mat`, this calculates tf-idf.)
-    return mat * idf
+    # The `multiply` method works elementwise, and expands `idf` so the dimensions
+    # match. The end result (since `mat` is the term frequency matrix) is a matrix
+    # of TF-IDF values.
+    return mat.multiply(idf)
 
     #  empty = []
     #  another = []
