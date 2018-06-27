@@ -398,55 +398,63 @@ def create_matrix2():
 
     return (sparse.csr_matrix(mat), proteins, genomes)
 
-def inverse_frequency(m):
-    empty = []
-    another = []
-    counter = 0
-    numcols = len(m[0])
-    m = m.tranpose()
-    for column in m:
-        denominator = sum(m[column])
-        for entry in column:
-            numerator = m.item(column,entry)
-            tf = numerator/denominator
-            empty = empty.append(tf)
-    for column in m:
-        for entry in column:
-            i = m.item(column,entry)
-            if (i > 0):
-                counter = counter + 1
-                continue
-            elif (column = numcols):
-                counter = 0
-                pass
-            else:
-                pass
-        idf = log10(numcols / counter)
-        tf-idf = tf * idf
-        if (column >= numcols):
-            another = another.append(tf-idf)
+def inverse_frequency(mat):
+    """Apply TF-IDF to a matrix.
 
+    arguments:
+    - mat: a term-document matrix with shape `(n, m)`. `m[i, j]` is how many times
+    word `i` appears in document `j`.
 
+    returns:
+    Another matrix with shape `(n, m)`, where each element is the term frequency-
+    inverse document frequency of that word and document."""
+    # Using the raw-count definition of term frequency, tf(t, d) is just
+    # m[t, d].
 
+    # This compares each element of `m` to zero, and creates a matrix where
+    # `nonzero[i, j] = (mat[i, j] != 0)`.
+    nonzero = mat != 0
+    # This counts how many `True` values were in each row of `nonzero` -- that
+    # is, how many nonzero values were in that row of `mat`.
+    # `counts` is an `n x 1` matrix.
+    counts = nonzero.sum(axis=0)
+    # To get the inverse document frequency, the number of documents is divided
+    # by each count, and then the logarithm is taken.
+    # `idf` is also an `n x 1` matrix.
+    idf = np.log(m.shape[1] / counts)
 
+    # Since `idf` is the smaller matrix, it is broadcast to the size of `mat`.
+    # Then, multiplication occurs elementwise. The end result is that each row
+    # of `mat` is multiplied by the corresponding value in `idf`.
+    # (Also, since the term frequency is just `mat`, this calculates tf-idf.)
+    return mat * idf
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    #  empty = []
+    #  another = []
+    #  counter = 0
+    #  numcols = len(m[0])
+    #  m = m.tranpose()
+    #  for column in m:
+        #  denominator = sum(m[column])
+        #  for entry in column:
+            #  numerator = m.item(column,entry)
+            #  tf = numerator/denominator
+            #  empty = empty.append(tf)
+    #  for column in m:
+        #  for entry in column:
+            #  i = m.item(column,entry)
+            #  if (i > 0):
+                #  counter = counter + 1
+                #  continue
+            #  elif (column = numcols):
+                #  counter = 0
+                #  pass
+            #  else:
+                #  pass
+        #  idf = log10(numcols / counter)
+        #  tf-idf = tf * idf
+        #  if (column >= numcols):
+            #  another = another.append(tf-idf)
 
 
 if __name__ == "__main__":
