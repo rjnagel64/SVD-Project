@@ -1,5 +1,5 @@
 
-
+import pdb
 
 import Bio
 from Bio import Seq
@@ -19,6 +19,7 @@ import gzip
 
 import os
 import os.path
+import glob
 
 from shutil import copyfileobj
 
@@ -35,9 +36,10 @@ from shutil import copyfileobj
 DNA_SEQUENCE_DIR = "dna-sequences"
 PROTEIN_SEQUENCE_DIR = "protein-sequences"
 MATRIX_SAVE_DIR = "matrix"
+DEFAULT_GENOME_PATHS_FILE = "genomes.txt"
 
 def main(args):
-    (mat, proteins, genomes) = get_matrix()
+    (mat, proteins, genomes) = get_matrix(args)
 
     print(mat.shape)
 
@@ -114,36 +116,57 @@ def create_plot(mat, ss, Vh, name="test.pdf"):
     print(f"Saving plot...")
     plt.savefig(name, format="pdf")
 
-def get_matrix():
-    """Obtain the term-document matrix, either by loading from a file or creating
+def get_matrix(args):
+    """Obtain the term-document matrix, either by loading NCBI FTP paths from a file, all (.gbk) paths in a subdirectory, or creating
     from scratch."""
-    # If the matrix already exists, just load it.
-    if os.path.exists(MATRIX_SAVE_DIR):
-        print(f"Loading matrix from save...")
-        mat = sparse.load_npz(os.path.join(MATRIX_SAVE_DIR, "matrix.npz"))
+    #If arguments are passed, then use them to determine the .gbk files to use
+    if len(args)>1:
+        path = args[1]
+        # Check if the argument given is a valid directory
+        if os.path.isdir(path):
+            # If so, use this directory to find the .gbk files of interest
+            print("checking "+path+" for .gbk files...")
+            path_list = glob.glob(os.path.join(path,"**","*.gbk"),recursive=True)
+            print("found "+str(len(path_list))+" .gbk files...")
+            if not os.path.exists(PROTEIN_SEQUENCE_DIR):
+                print(f"Writing proteins...")
+                # pdb.set_trace()
+                write_proteins(path_list)
+        if os.path.isfile(path):
+            # If the path points to a file, use the file to search the NCBI server
+            print("Searching NCBI for genome data listed in "+ path+"...")
+            get_ncbi_data(path)
+    else:
+        # Proceed with the default pipeline via the FTP server provided by NCBI using the default list of genomes
+        print("No valid local path given. Searching NCBI for genome data listed in "+ DEFAULT_GENOME_PATHS_FILE+"...")
+        # If the matrix already exists, just load it.
+        if os.path.exists(MATRIX_SAVE_DIR):
+            print(f"Loading matrix from save...")
+            mat = sparse.load_npz(os.path.join(MATRIX_SAVE_DIR, "matrix.npz"))
 
-        print(f"Loading proteins from save...")
-        with open(os.path.join(MATRIX_SAVE_DIR, "proteins.txt"), "r") as f:
-            proteins = list(f)
+            print(f"Loading proteins from save...")
+            with open(os.path.join(MATRIX_SAVE_DIR, "proteins.txt"), "r") as f:
+                proteins = list(f)
 
-        print(f"Loading genomes from save...")
-        with open(os.path.join(MATRIX_SAVE_DIR, "genomes.txt"), "r") as f:
-            genomes = list(f)
+            print(f"Loading genomes from save...")
+            #Note that the filename used here is not to be confused with the default file listing FTP paths on the NCBI server
+            with open(os.path.join(MATRIX_SAVE_DIR, "genomes.txt"), "r") as f:
+                genomes = list(f)
 
-        print(f"Matrix loaded.")
-        return (mat, proteins, genomes)
+            print(f"Matrix loaded.")
+            return (mat, proteins, genomes)
 
-    # Otherwise, the matrix must be created.
-    print(f"Creating term-document matrix...")
+        # Otherwise, the matrix must be created.
+        print(f"Creating term-document matrix...")
 
-    # Only download the files if we don't already have them.
-    if not os.path.exists(DNA_SEQUENCE_DIR):
-        print(f"Acquiring data...")
-        get_data()
+        # Only download the files if we don't already have them.
+        if not os.path.exists(DNA_SEQUENCE_DIR):
+            print(f"Acquiring data...")
+            get_ncbi_data()
 
-    if not os.path.exists(PROTEIN_SEQUENCE_DIR):
-        print(f"Writing proteins...")
-        write_proteins()
+        if not os.path.exists(PROTEIN_SEQUENCE_DIR):
+            print(f"Writing proteins...")
+            write_proteins()
 
     print("Constructing matrix...")
     (mat, proteins, genomes) = create_matrix2()
@@ -169,12 +192,12 @@ def save_data(mat, proteins, genomes):
     with open(os.path.join(MATRIX_SAVE_DIR, "genomes.txt"), "w") as f:
         f.writelines(genomes)
 
-def get_data():
+def get_ncbi_data(path=DEFAULT_GENOME_PATHS_FILE):
     """Retrieve data from the NCBI servers and databanks."""
 
     # The data files we want have information about them stored in 'genomes.txt'.
     # Perform simple parsing of that file to extract the relevant data.
-    with open("genomes.txt", "r") as f:
+    with open(path, "r") as f:
         genomes = f.read()
 
     # Take only the nonempty, noncomment lines of the file.
@@ -292,24 +315,27 @@ def extract_proteins(sequence):
 
         index = stop_index + 1
 
-def write_proteins():
-    """Write the proteins from a given file into a file."""
+def write_proteins(path_list=None):
+    """Write the proteins from a given list of paths to .gbk files into files in the protein sequence directory."""
+    if path_list == None:
+        path_list = map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name), os.listdir(DNA_SEQUENCE_DIR))
     if not os.path.exists(PROTEIN_SEQUENCE_DIR):
         os.mkdir(PROTEIN_SEQUENCE_DIR)
 
     totals = Counter()
-    for filename in os.listdir(DNA_SEQUENCE_DIR):
-        (basename, ext) = os.path.splitext(filename)
+    for path in path_list:
+        (root, ext) = os.path.splitext(path)
+        filename = os.path.splitext(os.path.basename(path))[0]
 
         # Ignore files not in the genbank format.
         if ext not in (".gb", ".gbk"):
             continue
 
-        print(f"Processing file {filename}...")
+        print(f"Processing file {path}...")
 
         counter = Counter()
-        with open(os.path.join(PROTEIN_SEQUENCE_DIR, basename), "w") as f:
-            for (i, seq) in enumerate(translate_sequences(os.path.join(DNA_SEQUENCE_DIR, filename))):
+        with open(os.path.join(PROTEIN_SEQUENCE_DIR, filename), "w") as f:
+            for (i, seq) in enumerate(translate_sequences(path)):
                 print(f"Extracting proteins from sequence number {i}...")
 
                 for protein in extract_proteins(seq):

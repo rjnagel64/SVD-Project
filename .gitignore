@@ -9,6 +9,10 @@ dna-sequences/
 protein-sequences/
 matrix/
 
+# Used for an experiment involving all of the virus data on ncbi, a very large
+# and unnecessary folder we should ignore
+virus_genomes/
+
 # These files really don't matter, but my text editor uses them.
 # Thus, they are also ignored.
 *.swp
