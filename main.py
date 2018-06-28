@@ -47,11 +47,11 @@ def main(args):
     print(ss)
     print(Vh)
 
-    #  mat = mat
-    #  create_plot(mat, ss, Vh, name="test.pdf")
+    mat = mat
+    create_plot(mat, ss, Vh, name="test.pdf")
 
-    #  mat2 = inverse_frequency(mat)
-    #  create_plot(mat2, ss, Vh, name="test2.pdf")
+    mat2 = inverse_frequency(mat)
+    create_plot(mat2, ss, Vh, name="test2.pdf")
 
     mat3 = norm(mat)
     create_plot(mat3, ss, Vh, name="test3.pdf")
