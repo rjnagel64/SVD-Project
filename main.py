@@ -416,7 +416,8 @@ def create_matrix2():
             all_proteins.add(protein)
 
     proteins = []
-    genomes = list(counters.keys())
+    genomes = list(map(lambda x: x + "\n", counters.keys()))
+    print(genomes)
     mat = np.zeros((len(all_proteins), len(counters.keys())))
 
     # Put the genomes on the outside loop so we have a few long iterations
@@ -429,6 +430,8 @@ def create_matrix2():
             # Only build the list of proteins once.
             if j == 0:
                 proteins.append(protein)
+
+    print(proteins[0:10])
 
     return (sparse.csr_matrix(mat), proteins, genomes)
 
