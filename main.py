@@ -1,5 +1,5 @@
 
-
+import pdb
 
 import Bio
 from Bio import Seq
@@ -120,10 +120,13 @@ def get_matrix(args):
         # Check if the argument given is a valid directory
         if os.path.isdir(path):
             # If so, use this directory to find the .gbk files of interest
-            print("checking "+path+"for .gbk files...")
+            print("checking "+path+" for .gbk files...")
             path_list = glob.glob(os.path.join(path,"**","*.gbk"),recursive=True)
-            print("found "+str(len(file_list))+" .gbk files...")
-            write_proteins(path_list)
+            print("found "+str(len(path_list))+" .gbk files...")
+            if not os.path.exists(PROTEIN_SEQUENCE_DIR):
+                print(f"Writing proteins...")
+                # pdb.set_trace()
+                write_proteins(path_list)
         if os.path.isfile(path):
             # If the path points to a file, use the file to search the NCBI server
             print("Searching NCBI for genome data listed in "+ path+"...")
@@ -307,15 +310,17 @@ def extract_proteins(sequence):
 
         index = stop_index + 1
 
-def write_proteins(path_list=map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name), os.listdir(DNA_SEQUENCE_DIR))):
+def write_proteins(path_list=None):
     """Write the proteins from a given list of paths to .gbk files into files in the protein sequence directory."""
+    if path_list == None:
+        path_list = map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name), os.listdir(DNA_SEQUENCE_DIR))
     if not os.path.exists(PROTEIN_SEQUENCE_DIR):
         os.mkdir(PROTEIN_SEQUENCE_DIR)
 
     totals = Counter()
     for path in path_list:
         (root, ext) = os.path.splitext(path)
-        filename = os.splitext(os.path.basename(path))[0]
+        filename = os.path.splitext(os.path.basename(path))[0]
 
         # Ignore files not in the genbank format.
         if ext not in (".gb", ".gbk"):
@@ -325,7 +330,7 @@ def write_proteins(path_list=map(lambda name: os.path.join(DNA_SEQUENCE_DIR, nam
 
         counter = Counter()
         with open(os.path.join(PROTEIN_SEQUENCE_DIR, filename), "w") as f:
-            for (i, seq) in enumerate(translate_sequences(os.path.join(DNA_SEQUENCE_DIR, filename, ext))):
+            for (i, seq) in enumerate(translate_sequences(path)):
                 print(f"Extracting proteins from sequence number {i}...")
 
                 for protein in extract_proteins(seq):
