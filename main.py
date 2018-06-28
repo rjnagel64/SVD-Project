@@ -45,9 +45,14 @@ def main(args):
     print(ss)
     print(Vh)
 
-    mat = inverse_frequency(mat)
+    #  mat = mat
+    #  create_plot(mat, ss, Vh, name="test.pdf")
 
-    create_plot(mat, ss, Vh, name="test2.pdf")
+    #  mat2 = inverse_frequency(mat)
+    #  create_plot(mat2, ss, Vh, name="test2.pdf")
+
+    mat3 = norm(mat)
+    create_plot(mat3, ss, Vh, name="test3.pdf")
 
 def create_plot(mat, ss, Vh, name="test.pdf"):
     """Create a scatter plot of words in the new basis
@@ -58,7 +63,7 @@ def create_plot(mat, ss, Vh, name="test.pdf"):
     - Vh: The matrix on the right in SVD. It forms a basis for V
     """
 
-    print(f"Creating plot...")
+    print(f"Creating plot {name}...")
     s0, s1 = ss[0:2]
 
     # The rows of Vh form a basis in the new space. I am keeping them as a matrix
@@ -457,6 +462,23 @@ def inverse_frequency(mat):
         #  tf-idf = tf * idf
         #  if (column >= numcols):
             #  another = another.append(tf-idf)
+
+def norm(mat):
+    """Normalize each row in `mat`
+
+    arguments:
+    - mat: a term-document matrix with shape `m x n`.
+
+    returns:
+    an `m x n` matrix such that each entry is the corresponding entry of `mat`
+    divided by that row's norm."""
+
+    # norms : m (not m x 1, for some reason)
+    norms = linalg.norm(mat, axis=1)
+    # Reshape it so that it actually is m x 1.
+    norms.resize(norms.shape + (1,))
+
+    return mat / norms
 
 
 if __name__ == "__main__":
