@@ -48,22 +48,35 @@ def main(args):
     print(Vh)
 
     mat = mat
-    create_plot(mat, ss, Vh, name="test.pdf")
+    xr = (-25, 25)
+    yr = (-10, 300)
+    create_plot(mat, ss, Vh, xrange=xr, yrange=yr, name="test.pdf")
 
     mat2 = inverse_frequency(mat)
-    create_plot(mat2, ss, Vh, name="test2.pdf")
+    xr = (-50, 50)
+    yr = (-10, 500)
+    create_plot(mat2, ss, Vh, xrange=xr, yrange=yr, name="test2.pdf")
 
     mat3 = norm(mat)
-    create_plot(mat3, ss, Vh, name="test3.pdf")
+    xr = (-2, 2)
+    yr = (-2, 2)
+    create_plot(mat3, ss, Vh, xrange=xr, yrange=yr, name="test3.pdf")
 
-def create_plot(mat, ss, Vh, name="test.pdf"):
+def create_plot(mat, ss, Vh, xrange=None, yrange=None, name="test.pdf"):
     """Create a scatter plot of words in the new basis
 
     arguments:
     - mat: The term-document matrix
     - ss: Singular values (not used? may remove this parameter)
     - Vh: The matrix on the right in SVD. It forms a basis for V
+    - xrange: A tuple `(xmin, xmax)` or None. Points outside this range are discarded.
+    - yrange: A tuple `(ymin, ymay)` or None. Points outside this range are discarded.
     """
+    if xrange is None:
+        xrange = (-float("inf"), float("inf"))
+
+    if yrange is None:
+        yrange = (-float("inf"), float("inf"))
 
     print(f"Creating plot {name}...")
     s0, s1 = ss[0:2]
@@ -90,8 +103,7 @@ def create_plot(mat, ss, Vh, name="test.pdf"):
     new_xs = []
     new_ys = []
     for (x, y) in zip(xs, ys):
-        #  if x < -25 or x > 25 or y > 700:
-        if False:
+        if x < xrange[0] or x > xrange[1] or y < yrange[0] or y > yrange[1]:
             continue
         else:
             new_xs.append(x)
@@ -417,7 +429,6 @@ def create_matrix2():
 
     proteins = []
     genomes = list(map(lambda x: x + "\n", counters.keys()))
-    print(genomes)
     mat = np.zeros((len(all_proteins), len(counters.keys())))
 
     # Put the genomes on the outside loop so we have a few long iterations
@@ -430,8 +441,6 @@ def create_matrix2():
             # Only build the list of proteins once.
             if j == 0:
                 proteins.append(protein)
-
-    print(proteins[0:10])
 
     return (sparse.csr_matrix(mat), proteins, genomes)
 
@@ -465,49 +474,24 @@ def inverse_frequency(mat):
     # of TF-IDF values.
     return mat.multiply(idf)
 
-    #  empty = []
-    #  another = []
-    #  counter = 0
-    #  numcols = len(m[0])
-    #  m = m.tranpose()
-    #  for column in m:
-        #  denominator = sum(m[column])
-        #  for entry in column:
-            #  numerator = m.item(column,entry)
-            #  tf = numerator/denominator
-            #  empty = empty.append(tf)
-    #  for column in m:
-        #  for entry in column:
-            #  i = m.item(column,entry)
-            #  if (i > 0):
-                #  counter = counter + 1
-                #  continue
-            #  elif (column = numcols):
-                #  counter = 0
-                #  pass
-            #  else:
-                #  pass
-        #  idf = log10(numcols / counter)
-        #  tf-idf = tf * idf
-        #  if (column >= numcols):
-            #  another = another.append(tf-idf)
-
 def norm(mat):
     """Normalize each row in `mat`
 
     arguments:
-    - mat: a term-document matrix with shape `m x n`.
+    - mat: a sparse term-document matrix with shape `m x n`.
 
     returns:
-    an `m x n` matrix such that each entry is the corresponding entry of `mat`
-    divided by that row's norm."""
+    a sparse `m x n` matrix such that each entry is the corresponding entry of
+    `mat` divided by that row's norm."""
 
     # norms : m (not m x 1, for some reason)
     norms = linalg.norm(mat, axis=1)
     # Reshape it so that it actually is m x 1.
     norms.resize(norms.shape + (1,))
 
-    return mat / norms
+    # Use elementwise division to divide each row by its norm, and remember to
+    # keep the matrix sparse.
+    return sparse.csr_matrix(mat / norms)
 
 
 if __name__ == "__main__":
