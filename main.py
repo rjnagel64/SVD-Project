@@ -36,6 +36,7 @@ from shutil import copyfileobj
 DNA_SEQUENCE_DIR = "dna-sequences"
 PROTEIN_SEQUENCE_DIR = "protein-sequences"
 MATRIX_SAVE_DIR = "matrix"
+PLOTS_DIR = "plots"
 DEFAULT_GENOME_PATHS_FILE = "genomes.txt"
 
 def main(args):
@@ -50,25 +51,26 @@ def main(args):
     mat = mat
     xr = (-25, 25)
     yr = (-10, 300)
-    create_plot(mat, ss, Vh, xrange=xr, yrange=yr, name="not_normalized.pdf")
+    create_plot(mat, ss, Vh, name="not_normalized.pdf", xrange=xr, yrange=yr)
 
     mat2 = inverse_frequency(mat)
     xr = (-50, 50)
     yr = (-10, 500)
-    create_plot(mat2, ss, Vh, xrange=xr, yrange=yr, name="tf_idf_normalized.pdf")
+    create_plot(mat2, ss, Vh, name="tf_idf_normalized.pdf", xrange=xr, yrange=yr)
 
     mat3 = norm(mat)
     xr = (-2, 2)
     yr = (-2, 2)
-    create_plot(mat3, ss, Vh, xrange=xr, yrange=yr, name="row_normalized.eps")
+    create_plot(mat3, ss, Vh, name="row_normalized.eps", xrange=xr, yrange=yr)
 
-def create_plot(mat, ss, Vh, xrange=None, yrange=None, name="plot.pdf"):
+def create_plot(mat, ss, Vh, name, xrange=None, yrange=None):
     """Create a scatter plot of words in the new basis, and save it to a PDF file
 
     arguments:
     - mat: The term-document matrix
     - ss: Singular values (not used? may remove this parameter)
     - Vh: The matrix on the right in SVD. It forms a basis for V
+    - name: The name of the plot. The result will be saved to `PLOTS_DIR/{name}`.
     - xrange: A tuple `(xmin, xmax)` or None. Points outside this range are discarded.
     - yrange: A tuple `(ymin, ymay)` or None. Points outside this range are discarded.
     """
@@ -116,8 +118,9 @@ def create_plot(mat, ss, Vh, xrange=None, yrange=None, name="plot.pdf"):
         s=2,
     )
 
-    print(f"Saving plot...")
-    plt.savefig(name)
+    plot_path = os.path.join(PLOTS_DIR, name)
+    print(f"Saving plot to {plot_path}...")
+    plt.savefig(plot_path)
 
 def get_matrix(args):
     """Obtain the term-document matrix, either by loading NCBI FTP paths from a file, all (.gbk) paths in a subdirectory, or creating
