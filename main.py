@@ -50,20 +50,20 @@ def main(args):
     mat = mat
     xr = (-25, 25)
     yr = (-10, 300)
-    create_plot(mat, ss, Vh, xrange=xr, yrange=yr, name="test.pdf")
+    create_plot(mat, ss, Vh, xrange=xr, yrange=yr, name="not_normalized.pdf")
 
     mat2 = inverse_frequency(mat)
     xr = (-50, 50)
     yr = (-10, 500)
-    create_plot(mat2, ss, Vh, xrange=xr, yrange=yr, name="test2.pdf")
+    create_plot(mat2, ss, Vh, xrange=xr, yrange=yr, name="tf_idf_normalized.pdf")
 
     mat3 = norm(mat)
     xr = (-2, 2)
     yr = (-2, 2)
-    create_plot(mat3, ss, Vh, xrange=xr, yrange=yr, name="test3.pdf")
+    create_plot(mat3, ss, Vh, xrange=xr, yrange=yr, name="row_normalized.eps")
 
-def create_plot(mat, ss, Vh, xrange=None, yrange=None, name="test.pdf"):
-    """Create a scatter plot of words in the new basis
+def create_plot(mat, ss, Vh, xrange=None, yrange=None, name="plot.pdf"):
+    """Create a scatter plot of words in the new basis, and save it to a PDF file
 
     arguments:
     - mat: The term-document matrix
@@ -86,12 +86,6 @@ def create_plot(mat, ss, Vh, xrange=None, yrange=None, name="test.pdf"):
     new_basis = Vh[0:2]
 
     # (2 * 7) @ (N * 7).T = (2 * N)
-
-    # TODO: Get rid of outliers.
-    # There is only one point with y > 1000 (~y = 4000)
-    # Almost all points lie between x = -25 and x = 25
-    # Also, the massive number of points is interesting for PDF renderers to deal
-    # with.
 
     # Transform each point with matrix multiplication.
     xs, ys = new_basis @ mat.transpose()
@@ -122,11 +116,8 @@ def create_plot(mat, ss, Vh, xrange=None, yrange=None, name="test.pdf"):
         s=2,
     )
 
-    # TODO: Add labels to some important points?
-    # Probably not. Amino acid sequences make terrible labels.
-
     print(f"Saving plot...")
-    plt.savefig(name, format="pdf")
+    plt.savefig(name)
 
 def get_matrix(args):
     """Obtain the term-document matrix, either by loading NCBI FTP paths from a file, all (.gbk) paths in a subdirectory, or creating
@@ -204,6 +195,8 @@ def save_data(mat, proteins, genomes):
     with open(os.path.join(MATRIX_SAVE_DIR, "genomes.txt"), "w") as f:
         f.writelines(genomes)
 
+# TODO: Eliminate default argument. We have only two uses of `get_ncbi_data`,
+# so a default is unnecessary.
 def get_ncbi_data(path=DEFAULT_GENOME_PATHS_FILE):
     """Retrieve data from the NCBI servers and databanks."""
 
@@ -327,6 +320,7 @@ def extract_proteins(sequence):
 
         index = stop_index + 1
 
+# TODO: Likewise, eliminate unnecessary default arguments.
 def write_proteins(path_list=None):
     """Write the proteins from a given list of paths to .gbk files into files in the protein sequence directory."""
     if path_list == None:
@@ -364,8 +358,9 @@ def write_proteins(path_list=None):
     print(f"In total, there were {total_proteins} proteins, of which {total_unique} were unique.")
 
 
-# This function should probably return the matrix variable.
+# TODO: We aren't actually using this function; it should probably be eliminated.
 def create_matrix():
+    # This function should probably return the matrix variable.
     # TODO: The class 'Counter' from the standard library module 'collections'
     # would do nicely for counting proteins.
     # TODO: Use proper matrix types from numpy/scipy (specifically, 'ndarray')
@@ -494,6 +489,9 @@ def norm(mat):
     return sparse.csr_matrix(mat / norms)
 
 
+# TODO: Argument parsing?
+#   For example, flags to specify local genome directory vs. file referencing
+#   NCBI data
 if __name__ == "__main__":
     from sys import argv
     main(argv)
