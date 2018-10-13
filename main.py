@@ -33,6 +33,15 @@ from shutil import copyfileobj
 # has a length that is not a multiple of three. Biopython suggests appending an
 # 'N' to the end of the sequence to rectify this.
 
+# TODO: Replace ad-hoc `genomes.txt` format with JSON/YAML? Eh. Not worth it.
+#       (Also, for some reason, the python standard library does not come with
+#       a module for YAML.)
+
+# TODO: Proper argument parsing
+#   * Extract the the logic from `get_matrix()`
+#   * `-l`, `--local` [directory]
+#   * `-r`, `--remote` [genomes.txt]
+
 DNA_SEQUENCE_DIR = "dna-sequences"
 PROTEIN_SEQUENCE_DIR = "protein-sequences"
 MATRIX_SAVE_DIR = "matrix"
@@ -63,6 +72,7 @@ def main(args):
     yr = (-2, 2)
     create_plot(mat3, ss, Vh, name="row_normalized.eps", xrange=xr, yrange=yr)
 
+# TODO: Remove argument `ss` from `create_plot`. It is unused.
 def create_plot(mat, ss, Vh, name, xrange=None, yrange=None):
     """Create a scatter plot of words in the new basis, and save it to a PDF file
 
@@ -81,6 +91,7 @@ def create_plot(mat, ss, Vh, name, xrange=None, yrange=None):
         yrange = (-float("inf"), float("inf"))
 
     print(f"Creating plot {name}...")
+
     s0, s1 = ss[0:2]
 
     # The rows of Vh form a basis in the new space. I am keeping them as a matrix
@@ -122,6 +133,7 @@ def create_plot(mat, ss, Vh, name, xrange=None, yrange=None):
     print(f"Saving plot to {plot_path}...")
     plt.savefig(plot_path)
 
+# TODO: Move command-line argument parsing elsewhere, and separate local/remote data collection.
 def get_matrix(args):
     """Obtain the term-document matrix, either by loading NCBI FTP paths from a file, all (.gbk) paths in a subdirectory, or creating
     from scratch."""
@@ -492,9 +504,6 @@ def norm(mat):
     return sparse.csr_matrix(mat / norms)
 
 
-# TODO: Argument parsing?
-#   For example, flags to specify local genome directory vs. file referencing
-#   NCBI data
 if __name__ == "__main__":
     from sys import argv
     main(argv)
