@@ -199,7 +199,7 @@ def get_matrix(args):
 def save_data(mat, proteins, genomes):
     """Save the term-document matrix into the subdirectory `MATRIX_SAVE_DIR`."""
     if not os.path.exists(MATRIX_SAVE_DIR):
-        os.mkdir("matrix")
+        os.mkdir(MATRIX_SAVE_DIR)
 
     #  np.save(os.path.join(MATRIX_SAVE_DIR, "matrix.npy"), mat)
     sparse.save_npz(os.path.join(MATRIX_SAVE_DIR, "matrix.npz"), mat)
