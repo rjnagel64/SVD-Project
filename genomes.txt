@@ -10,6 +10,10 @@
 # TODO: Get more data files.
 # https://www.saylor.org/content/BIO_Kimball/users.rcn.com/jkimball.ma.ultranet/BiologyPages/G/GenomeSizes.html
 # is a list of genomes sorted by size.
+#
+#
+# Would it be useful to specify an output directory?
+# I think so.
 
 # Drosophila melanogaster is a fruit fly.
 genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.gbff.gz

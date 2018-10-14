@@ -42,6 +42,9 @@ from shutil import copyfileobj
 #   * `-l`, `--local` [directory]
 #   * `-r`, `--remote` [genomes.txt]
 
+# TODO: In doc comments, I talk about `(mat, proteins, genomes)` at least 3 times.
+#       It should become its own data type, probably. (So it has a name.)
+
 DNA_SEQUENCE_DIR = "dna-sequences"
 PROTEIN_SEQUENCE_DIR = "protein-sequences"
 MATRIX_SAVE_DIR = "matrix"
@@ -135,8 +138,10 @@ def create_plot(mat, ss, Vh, name, xrange=None, yrange=None):
 
 # TODO: Move command-line argument parsing elsewhere, and separate local/remote data collection.
 def get_matrix(args):
-    """Obtain the term-document matrix, either by loading NCBI FTP paths from a file, all (.gbk) paths in a subdirectory, or creating
-    from scratch."""
+    """Obtain the term-document matrix, either by loading NCBI FTP paths from a
+    file, all (.gbk) paths in a subdirectory, or creating the matrix from
+    scratch.
+    """
     #If arguments are passed, then use them to determine the .gbk files to use
     if len(args)>1:
         path = args[1]
@@ -180,7 +185,7 @@ def get_matrix(args):
         # Only download the files if we don't already have them.
         if not os.path.exists(DNA_SEQUENCE_DIR):
             print(f"Acquiring data...")
-            get_ncbi_data()
+            get_ncbi_data(DEFAULT_GENOME_PATHS_FILE)
 
         if not os.path.exists(PROTEIN_SEQUENCE_DIR):
             print(f"Writing proteins...")
@@ -196,8 +201,71 @@ def get_matrix(args):
 
     return (mat, proteins, genomes)
 
+def get_matrix2(dir, is_remote):
+    """Get the term-document matrix.
+
+    If `MATRIX_SAVE_DIR` exists, the matrix will be loaded from there.
+    Otherwise, the matrix will be created and saved to `MATRIX_SAVE_DIR`.
+
+    arguments:
+    - dir: A path to a directory that contains `.gb` or `.gbk` files.
+    - is_remote: If `is_remote` is `True`, `dir` is checked for a `genomes.txt`
+        file. The contents of that file are references to data on NCBI's GenBack
+        FTP server, which will be retrieved if they are not already present in
+        `dir`.
+
+    returns:
+    - ???
+    """
+    # 1. If the matrix already exists, load it.
+    # 2. Otherwise, acquire the data.
+    #   a. The data exists locally. [list of paths]
+    #   b. The data is remote. Download each file, then [list of paths]
+    # 3. Process the data.
+    #   a. For each path,
+
+    # If the matrix already exists, just load it.
+    if os.path.exists(MATRIX_SAVE_DIR):
+        return load_data(MATRIX_SAVE_DIR)
+
+    # Otherwise, the matrix must be constructed.
+    print("Constructing matrix...")
+
+    print("Searching for GenBank files...")
+    if is_remote:
+        load_remote(dir)
+
+    paths = find_files(dir)
+
+    print(f"Found {len(paths)} GenBank files.")
+
+    for path in paths:
+        # Check if `path` is in `PROTEIN_SEQUENCE_DIR`. If so, continue.
+        # Else, write its proteins.
+        # Note: The files of PROTEIN_SEQUENCE_DIR are not literally `path`.
+        pass
+
+    # Wait what
+    # We search for paths, but if the protein sequences already exists,
+    # do nothing?
+    # what if `path_list` contains something not in `PROTEIN_SEQUENCE_DIR`?
+    #  if not os.path.exists(PROTEIN_SEQUENCE_DIR):
+        #  print(f"Writing proteins...")
+        #  write_proteins(path_list)
+
+    # Now that all the protein sequences have been created, construct the matrix.
+    return create_matrix2()
+
 def save_data(mat, proteins, genomes):
-    """Save the term-document matrix into the subdirectory `MATRIX_SAVE_DIR`."""
+    """Save the term-document matrix into the subdirectory `MATRIX_SAVE_DIR`.
+
+    arguments:
+    - mat: A scipy sparse array.
+    - proteins: A list of protein sequences such that the `i`th row
+        of `mat` corresponds to `proteins[i]`.
+    - genomes: A list of genome names such that the `j`th column of `mat`
+        corresponds to `genomes[j]`.
+    """
     if not os.path.exists(MATRIX_SAVE_DIR):
         os.mkdir(MATRIX_SAVE_DIR)
 
@@ -210,10 +278,115 @@ def save_data(mat, proteins, genomes):
     with open(os.path.join(MATRIX_SAVE_DIR, "genomes.txt"), "w") as f:
         f.writelines(genomes)
 
-# TODO: Eliminate default argument. We have only two uses of `get_ncbi_data`,
-# so a default is unnecessary.
-def get_ncbi_data(path=DEFAULT_GENOME_PATHS_FILE):
-    """Retrieve data from the NCBI servers and databanks."""
+def load_data(dir):
+    """Load the term-document matrix from a directory.
+
+    arguments:
+    - dir: A directory path containing files `matrix.npz`, `proteins.txt`, and
+      `genomes.txt`
+
+    returns:
+    A tuple `(mat, proteins, genomes)` such that:
+    - `mat` is a scipy sparse array.
+    - `proteins` is the list of all protein sequences such that the `i`th row
+        of `mat` corresponds to `proteins[i]`.
+    - `genomes` is the list of genome names such that the `j`th column of `mat`
+        corresponds to `genomes[j]`.
+    """
+    print(f"Loading matrix from save...")
+    mat = sparse.load_npz(os.path.join(dir, "matrix.npz"))
+
+    print(f"Loading proteins from save...")
+    with open(os.path.join(dir, "proteins.txt"), "r") as f:
+        proteins = list(f)
+
+    print(f"Loading genomes from save...")
+    #Note that the filename used here is not to be confused with the default
+    #file listing FTP paths on the NCBI server
+    with open(os.path.join(dir, "genomes.txt"), "r") as f:
+        genomes = list(f)
+
+    print(f"Matrix loaded.")
+    return (mat, proteins, genomes)
+
+def load_remote(dir):
+    """Use a `genomes.txt` file to populate a directory with genomes.
+
+    Files mentioned in `genomes.txt` that are not already present in the
+    directory will be downloaded via FTP from NCBI's GenBank.
+
+    arguments:
+    - dir: A path to a directory containing a `genomes.txt` file.
+    """
+    if os.path.isdir(dir):
+        genomes_file = os.path.join(dir, "genomes.txt")
+        try:
+            with open(genomes_file, "r") as f:
+                genomes = f.read()
+        except FileNotFoundError:
+            print(f"Error: There was supposed to be a genomes.txt file in {dir}")
+            raise RuntimeError()
+
+        # Take only the nonempty, noncomment lines of the file.
+        lines = list(filter(lambda l: l != "" and l[0] != "#",
+                            map(str.strip,
+                                genomes.splitlines())))
+        # This turns ['a', 'b', 'c', 'd', ...] into [('a', 'b'), ('c', 'd'), ...].
+        files = list(zip(lines[::2], lines[1::2]))
+
+        # Only download files that are not already present.
+        to_retrieve = []
+        for (path, file) in files:
+            if not os.path.exists(os.path.join(dir, file)):
+                to_retrieve.append((path, file))
+
+        print(f"{genomes_file} contains {len(files)} files, of which " +
+              f"{len(to_retrieve)} must be downloaded.")
+
+        # Retrieve the files and store them in `dir`.
+        retrieve_files(to_retrieve, dir)
+
+    else:
+        print(f"Error: {dir} was supposed to be a directory.")
+        raise RuntimeError()
+
+# TODO: Make this return an iterator?
+def find_files(dir):
+    """Recursively search a directory for `.gb` and `.gbk` files.
+    
+    arguments:
+    - dir: The directory to search.
+    
+    returns:
+    A list of paths to files.
+    """
+    paths = []
+    if os.path.isdir(dir):
+        print(f"Checking {dir} for .gbk files...")
+
+        # TODO: Remote files can be gzipped. Do I want to deal with that here?
+        for (path, _dirnames, filenames) in os.walk(dir):
+            for filename in filenames:
+                (name, ext) = os.path.splitext(filename)
+                if ext in (".gb", ".gbk"):
+                    paths.append(os.path.join(path, filename))
+
+        # some of our data files are .gb.
+        #  paths = glob.glob(os.path.join(path, "**", "*.gbk"), recursive=True)
+        #  print(f"Found {len(path_list)} .gbk files")
+
+    else:
+        # Aargh. Error reporting.
+        print(f"Error: {dir} was supposed to be a directory.")
+        raise RuntimeError()
+
+    return paths
+
+def get_ncbi_data(path):
+    """Retrieve data from the NCBI servers and databanks.
+
+    The data files retrieved are stored in `DNA_SEQUENCE_DIR`.
+    """
 
     # The data files we want have information about them stored in 'genomes.txt'.
     # Perform simple parsing of that file to extract the relevant data.
@@ -337,7 +510,9 @@ def extract_proteins(sequence):
 
 # TODO: Likewise, eliminate unnecessary default arguments.
 def write_proteins(path_list=None):
-    """Write the proteins from a given list of paths to .gbk files into files in the protein sequence directory."""
+    """Write the proteins from a given list of paths to .gbk files into files
+    in the protein sequence directory.
+    """
     if path_list == None:
         path_list = map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name), os.listdir(DNA_SEQUENCE_DIR))
     if not os.path.exists(PROTEIN_SEQUENCE_DIR):
@@ -423,7 +598,8 @@ def create_matrix2():
     - `proteins` is the list of all protein sequences such that the `i`th row
         of `mat` corresponds to `proteins[i]`.
     - `genomes` is the list of genome names such that the `j`th column of `mat`
-        corresponds to `genomes[j]`."""
+        corresponds to `genomes[j]`.
+    """
     # `counters` associates each filename with a `Counter` of all the proteins
     # in that file.
     counters = {}
@@ -463,7 +639,8 @@ def inverse_frequency(mat):
 
     returns:
     Another matrix with shape `(n, m)`, where each element is the term frequency-
-    inverse document frequency of that word and document."""
+    inverse document frequency of that word and document.
+    """
     # Using the raw-count definition of term frequency, tf(t, d) is just
     # mat[t, d].
 
@@ -492,7 +669,8 @@ def norm(mat):
 
     returns:
     a sparse `m x n` matrix such that each entry is the corresponding entry of
-    `mat` divided by that row's norm."""
+    `mat` divided by that row's norm.
+    """
 
     # norms : m (not m x 1, for some reason)
     norms = linalg.norm(mat, axis=1)
