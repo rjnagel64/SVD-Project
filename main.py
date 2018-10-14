@@ -189,7 +189,8 @@ def get_matrix(args):
 
         if not os.path.exists(PROTEIN_SEQUENCE_DIR):
             print(f"Writing proteins...")
-            write_proteins()
+            path_list = map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name), os.listdir(DNA_SEQUENCE_DIR))
+            write_proteins(path_list)
 
     print("Constructing matrix...")
     (mat, proteins, genomes) = create_matrix2()
@@ -246,7 +247,7 @@ def get_matrix2(dir, is_remote):
         pass
 
     # Wait what
-    # We search for paths, but if the protein sequences already exists,
+    # We search for paths, but if the protein sequences dir already exists,
     # do nothing?
     # what if `path_list` contains something not in `PROTEIN_SEQUENCE_DIR`?
     #  if not os.path.exists(PROTEIN_SEQUENCE_DIR):
@@ -508,13 +509,13 @@ def extract_proteins(sequence):
 
         index = stop_index + 1
 
-# TODO: Likewise, eliminate unnecessary default arguments.
-def write_proteins(path_list=None):
+def write_proteins(path_list):
     """Write the proteins from a given list of paths to .gbk files into files
     in the protein sequence directory.
+
+    arguments:
+    - path_list: ???
     """
-    if path_list == None:
-        path_list = map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name), os.listdir(DNA_SEQUENCE_DIR))
     if not os.path.exists(PROTEIN_SEQUENCE_DIR):
         os.mkdir(PROTEIN_SEQUENCE_DIR)
 
