@@ -189,8 +189,9 @@ def get_matrix(args):
 
         if not os.path.exists(PROTEIN_SEQUENCE_DIR):
             print(f"Writing proteins...")
-            path_list = map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name), os.listdir(DNA_SEQUENCE_DIR))
-            write_proteins(path_list)
+            paths = list(map(lambda name: os.path.join(DNA_SEQUENCE_DIR, name),
+                             os.listdir(DNA_SEQUENCE_DIR)))
+            write_proteins(paths)
 
     print("Constructing matrix...")
     (mat, proteins, genomes) = create_matrix2()
@@ -218,13 +219,6 @@ def get_matrix2(dir, is_remote):
     returns:
     - ???
     """
-    # 1. If the matrix already exists, load it.
-    # 2. Otherwise, acquire the data.
-    #   a. The data exists locally. [list of paths]
-    #   b. The data is remote. Download each file, then [list of paths]
-    # 3. Process the data.
-    #   a. For each path,
-
     # If the matrix already exists, just load it.
     if os.path.exists(MATRIX_SAVE_DIR):
         return load_data(MATRIX_SAVE_DIR)
@@ -232,19 +226,22 @@ def get_matrix2(dir, is_remote):
     # Otherwise, the matrix must be constructed.
     print("Constructing matrix...")
 
+    # Search for the sequence files that will be used to construct the matrix.
     print("Searching for GenBank files...")
     if is_remote:
         load_remote(dir)
 
     paths = find_files(dir)
-
     print(f"Found {len(paths)} GenBank files.")
 
+    # ???
     for path in paths:
         # Check if `path` is in `PROTEIN_SEQUENCE_DIR`. If so, continue.
         # Else, write its proteins.
         # Note: The files of PROTEIN_SEQUENCE_DIR are not literally `path`.
         pass
+
+    # Write the protein sequences.
 
     # Wait what
     # We search for paths, but if the protein sequences dir already exists,
@@ -363,18 +360,13 @@ def find_files(dir):
     """
     paths = []
     if os.path.isdir(dir):
-        print(f"Checking {dir} for .gbk files...")
+        print(f"Checking {dir} for .gb and .gbk files...")
 
-        # TODO: Remote files can be gzipped. Do I want to deal with that here?
         for (path, _dirnames, filenames) in os.walk(dir):
             for filename in filenames:
                 (name, ext) = os.path.splitext(filename)
                 if ext in (".gb", ".gbk"):
                     paths.append(os.path.join(path, filename))
-
-        # some of our data files are .gb.
-        #  paths = glob.glob(os.path.join(path, "**", "*.gbk"), recursive=True)
-        #  print(f"Found {len(path_list)} .gbk files")
 
     else:
         # Aargh. Error reporting.
@@ -387,6 +379,9 @@ def get_ncbi_data(path):
     """Retrieve data from the NCBI servers and databanks.
 
     The data files retrieved are stored in `DNA_SEQUENCE_DIR`.
+
+    arguments:
+    - path: the path to the `genomes.txt` file
     """
 
     # The data files we want have information about them stored in 'genomes.txt'.
@@ -417,41 +412,50 @@ def retrieve_files(filepaths, dest_dir):
     if not os.path.exists(dest_dir):
         os.mkdir(dest_dir)
 
+    # Some files retrieved from the server may be gzip-compressed.
+    to_decompress = []
+
+    # Connect to the GenBank server.
     f = FTP("ftp.ncbi.nlm.nih.gov")
     f.login()
 
+    # Retrieve the files.
     for (fp, fn) in filepaths:
         (path, filename) = os.path.split(fp)
+
+        (_, ext) = os.path.splitext(filename)
+        if ext == ".gz":
+            to_decompress.append((filename, fn))
+            dest_file = filename
+        else:
+            dest_file = fn
+
         print(f"Downloading {filename} ...")
         # Return to the root directory of the available files.
         f.cwd("/")
         # Go to the directory containing the file we want.
         f.cwd(path)
-        with open(os.path.join(dest_dir, fn), "wb") as fd:
+
+        with open(os.path.join(dest_dir, dest_file), "wb") as fd:
             f.retrbinary("RETR " + filename, fd.write)
 
     f.quit()
 
     print("Files downloaded.")
 
-    # Decompress the files downloaded.
-    for filename in os.listdir(dest_dir):
-        (path, ext) = os.path.splitext(filename)
-        if ext == ".gz":
-            print(f"Decompressing {filename}...")
-            compressed_filename = os.path.join(dest_dir, filename)
+    # Decompress downloaded gzip files.
+    for (cfn, dfn) in to_decompress:
+        print(f"Decompressing {cfn}...")
+        compressed_filename = os.path.join(dest_dir, cfn)
+        decompressed_filename = os.path.join(dest_dir, dfn)
 
-            # Decompress the file and copy its contents into a new file.
-            with gzip.open(compressed_filename, "rb") as compressed_file:
-                with open(os.path.join(dest_dir, path), "wb") as decompressed_file:
-                    copyfileobj(compressed_file, decompressed_file)
+        # Decompress the file and copy its contents into a new file.
+        with gzip.open(compressed_filename, "rb") as compressed_file:
+            with open(decompressed_filename, "wb") as decompressed_file:
+                copyfileobj(compressed_file, decompressed_file)
 
-            # Delete the compressed file. It's not useful.
-            os.remove(compressed_filename)
-
-        else:
-            # Ignore files that are not compressed.
-            continue
+        # Delete the compressed file. It's not useful.
+        os.remove(compressed_filename)
 
     print("Files downloaded and decompressed.")
 
@@ -488,7 +492,6 @@ def extract_proteins(sequence):
     returns:
     An iterator for each protein sequence in the translated sequence.
     """
-
     index = 0
     while index != -1 and index < len(sequence):
         start_index = sequence.find("M", index)
@@ -509,18 +512,18 @@ def extract_proteins(sequence):
 
         index = stop_index + 1
 
-def write_proteins(path_list):
+def write_proteins(paths):
     """Write the proteins from a given list of paths to .gbk files into files
     in the protein sequence directory.
 
     arguments:
-    - path_list: ???
+    - paths: ???
     """
     if not os.path.exists(PROTEIN_SEQUENCE_DIR):
         os.mkdir(PROTEIN_SEQUENCE_DIR)
 
     totals = Counter()
-    for path in path_list:
+    for path in paths:
         (root, ext) = os.path.splitext(path)
         filename = os.path.splitext(os.path.basename(path))[0]
 
