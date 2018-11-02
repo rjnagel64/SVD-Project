@@ -13,6 +13,9 @@ matrix/
 # and unnecessary folder we should ignore
 virus_genomes/
 
+# Stuff created as output of the program should not be put in version control.
+plots/
+
 # These files really don't matter, but my text editor uses them.
 # Thus, they are also ignored.
 *.swp
