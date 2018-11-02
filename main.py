@@ -59,7 +59,7 @@ DEFAULT_GENOME_PATHS_FILE = "genomes.txt"
 
 def main(args):
     # (mat, proteins, genomes) = get_matrix(args)
-    (mat, proteins, genomes) = get_matrix2("./new-dna/", is_remote=True)
+    (mat, proteins, genomes) = get_matrix2("./genomes.txt", is_remote=True)
 
     print(mat.shape)
 

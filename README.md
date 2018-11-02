@@ -71,6 +71,9 @@ The format of a `genomes.txt` file is quite simple.
 
 	* Blank lines and lines where the first non-whitespace character is `#` are
 		ignored.
+	* The first significant line contains a number of `key=value` pairs, separated
+		by whitespace. Currently, the only meaningful attribute is `destdir`, which
+		specifies the output directory of the `genomes.txt` file.
 	* Genomes are specified over two lines:
 
 		1. The path to the genome on the NCBI FTP server
@@ -78,5 +81,3 @@ The format of a `genomes.txt` file is quite simple.
 
 If the server-path ends with `.gz`, the file will be decompressed after downloading.
 
-
-TODO: Talk about `$ python3 main.py genome-directory/` vs `$ python3 main.py`
