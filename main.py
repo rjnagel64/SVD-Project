@@ -26,8 +26,9 @@ from shutil import copyfileobj
 # TODO: Add an optional normalization step to matrix creation.
 #   * Create a new function, `normalize(mat, proteins, genomes)`?
 #   * Do TF-IDF normalization as one option
+#   (done?)
 
-# TODO: Create visualization of the rank 2 approximation using matplotlib.
+# TODO: Create visualization of the rank 2 approximation using matplotlib. (done?)
 
 # TODO: One of the sequences in the drosophila melanogaster genome (sequence 0)
 # has a length that is not a multiple of three. Biopython suggests appending an
@@ -36,6 +37,11 @@ from shutil import copyfileobj
 # TODO: Replace ad-hoc `genomes.txt` format with JSON/YAML? Eh. Not worth it.
 #       (Also, for some reason, the python standard library does not come with
 #       a module for YAML.)
+# TODO: Allow genomes.txt to specify its output directory, so genomes.txt can be
+#       checked into version control, but the genomes are not. Alternatively,
+#       add a .gitignore to the directory containing the genomes.txt file.
+#       - The first non-blank line should contain key=value pairs, split on
+#         whitespace.
 
 # TODO: Proper argument parsing
 #   * Extract the the logic from `get_matrix()`
@@ -52,7 +58,8 @@ PLOTS_DIR = "plots"
 DEFAULT_GENOME_PATHS_FILE = "genomes.txt"
 
 def main(args):
-    (mat, proteins, genomes) = get_matrix(args)
+    # (mat, proteins, genomes) = get_matrix(args)
+    (mat, proteins, genomes) = get_matrix2("./new-dna/", is_remote=True)
 
     print(mat.shape)
 
@@ -212,12 +219,13 @@ def get_matrix2(dir, is_remote):
     arguments:
     - dir: A path to a directory that contains `.gb` or `.gbk` files.
     - is_remote: If `is_remote` is `True`, `dir` is checked for a `genomes.txt`
-        file. The contents of that file are references to data on NCBI's GenBack
+        file. The contents of that file are references to data on NCBI's GenBank
         FTP server, which will be retrieved if they are not already present in
         `dir`.
 
     returns:
-    - ???
+    TODO: Actually write out what the return type of this function is. (see `load_data`)
+    - The term-document matrix, genome labels, and protein labels
     """
     # If the matrix already exists, just load it.
     if os.path.exists(MATRIX_SAVE_DIR):
@@ -231,28 +239,35 @@ def get_matrix2(dir, is_remote):
     if is_remote:
         load_remote(dir)
 
+    # Find the genome files to use.
     paths = find_files(dir)
     print(f"Found {len(paths)} GenBank files.")
 
-    # ???
+    # For each genome, determine if the protein sequences have already been
+    # extracted. If not, write the proteins.
+    to_write = []
     for path in paths:
-        # Check if `path` is in `PROTEIN_SEQUENCE_DIR`. If so, continue.
-        # Else, write its proteins.
-        # Note: The files of PROTEIN_SEQUENCE_DIR are not literally `path`.
-        pass
+        (_, filename) = os.path.split(path)
+        (base, _ext) = os.path.splitext(filename)
 
-    # Write the protein sequences.
+        protein_path = os.path.join(PROTEIN_SEQUENCE_DIR, base)
+        if not os.path.exists(protein_path):
+            to_write.append(path)
 
-    # Wait what
-    # We search for paths, but if the protein sequences dir already exists,
-    # do nothing?
-    # what if `path_list` contains something not in `PROTEIN_SEQUENCE_DIR`?
-    #  if not os.path.exists(PROTEIN_SEQUENCE_DIR):
-        #  print(f"Writing proteins...")
-        #  write_proteins(path_list)
+    if to_write != []:
+        print(f"Writing {len(to_write)} protein sequence files...")
+        write_proteins(to_write)
+
+    else:
+        print("No protein sequences to write.")
 
     # Now that all the protein sequences have been created, construct the matrix.
-    return create_matrix2()
+    (mat, proteins, genomes) = create_matrix2()
+
+    # Save the matrix.
+    save_data(mat, proteins, genomes)
+
+    return (mat, proteins, genomes)
 
 def save_data(mat, proteins, genomes):
     """Save the term-document matrix into the subdirectory `MATRIX_SAVE_DIR`.
@@ -348,7 +363,6 @@ def load_remote(dir):
         print(f"Error: {dir} was supposed to be a directory.")
         raise RuntimeError()
 
-# TODO: Make this return an iterator?
 def find_files(dir):
     """Recursively search a directory for `.gb` and `.gbk` files.
     
@@ -516,25 +530,23 @@ def write_proteins(paths):
     """Write the proteins from a given list of paths to .gbk files into files
     in the protein sequence directory.
 
+    If `PROTEIN_SEQUENCE_DIR` does not exist, it will be created.
+
     arguments:
-    - paths: ???
+    - paths: A list of paths to `.gb` or `.gbk` files.
     """
     if not os.path.exists(PROTEIN_SEQUENCE_DIR):
         os.mkdir(PROTEIN_SEQUENCE_DIR)
 
     totals = Counter()
     for path in paths:
-        (root, ext) = os.path.splitext(path)
-        filename = os.path.splitext(os.path.basename(path))[0]
-
-        # Ignore files not in the genbank format.
-        if ext not in (".gb", ".gbk"):
-            continue
+        (_root, filename) = os.path.split(path)
+        (basename, _ext) = os.path.splitext(filename)
 
         print(f"Processing file {path}...")
 
         counter = Counter()
-        with open(os.path.join(PROTEIN_SEQUENCE_DIR, filename), "w") as f:
+        with open(os.path.join(PROTEIN_SEQUENCE_DIR, basename), "w") as f:
             for (i, seq) in enumerate(translate_sequences(path)):
                 print(f"Extracting proteins from sequence number {i}...")
 
