@@ -210,18 +210,20 @@ def get_matrix(args):
 
     return (mat, proteins, genomes)
 
-def get_matrix2(dir, is_remote):
+def get_matrix2(path, is_remote):
     """Get the term-document matrix.
 
     If `MATRIX_SAVE_DIR` exists, the matrix will be loaded from there.
     Otherwise, the matrix will be created and saved to `MATRIX_SAVE_DIR`.
 
     arguments:
-    - dir: A path to a directory that contains `.gb` or `.gbk` files.
-    - is_remote: If `is_remote` is `True`, `dir` is checked for a `genomes.txt`
-        file. The contents of that file are references to data on NCBI's GenBank
-        FTP server, which will be retrieved if they are not already present in
-        `dir`.
+    - path: A file or directory path. Its interpretation depends on the value of
+        `is_remote`.
+    - is_remote: If `is_remote` is `False`, `path` is a path to a directory
+        containing `.gb` and `.gbk` files. It will be recursively searched.
+        If `is_remote` is `True`, `path` is the path to a `genomes.txt` file
+        specifying genome files on NCBI's GenBank FTP server, which will be
+        retrieved if they are not already present.
 
     returns:
     TODO: Actually write out what the return type of this function is. (see `load_data`)
@@ -237,7 +239,9 @@ def get_matrix2(dir, is_remote):
     # Search for the sequence files that will be used to construct the matrix.
     print("Searching for GenBank files...")
     if is_remote:
-        load_remote(dir)
+        dir = load_remote(path)
+    else:
+        dir = path
 
     # Find the genome files to use.
     paths = find_files(dir)
@@ -322,46 +326,62 @@ def load_data(dir):
     print(f"Matrix loaded.")
     return (mat, proteins, genomes)
 
-def load_remote(dir):
+def load_remote(genomes_file):
     """Use a `genomes.txt` file to populate a directory with genomes.
 
     Files mentioned in `genomes.txt` that are not already present in the
-    directory will be downloaded via FTP from NCBI's GenBank.
+    directory will be downloaded via FTP from NCBI's GenBank. The files
+    will be saved in directory specified the 'dest_dir' attribute of the
+    genomes file (if it exists), or the same directory as the genomes file
+    otherwise. This directory will be created if it does not already exist.
 
     arguments:
-    - dir: A path to a directory containing a `genomes.txt` file.
+    - genomes_file: The path to a `genomes.txt` file.
+
+    returns:
+    - The path of directory containing the downloaded files.
     """
-    if os.path.isdir(dir):
-        genomes_file = os.path.join(dir, "genomes.txt")
-        try:
-            with open(genomes_file, "r") as f:
-                genomes = f.read()
-        except FileNotFoundError:
-            print(f"Error: There was supposed to be a genomes.txt file in {dir}")
-            raise RuntimeError()
-
-        # Take only the nonempty, noncomment lines of the file.
-        lines = list(filter(lambda l: l != "" and l[0] != "#",
-                            map(str.strip,
-                                genomes.splitlines())))
-        # This turns ['a', 'b', 'c', 'd', ...] into [('a', 'b'), ('c', 'd'), ...].
-        files = list(zip(lines[::2], lines[1::2]))
-
-        # Only download files that are not already present.
-        to_retrieve = []
-        for (path, file) in files:
-            if not os.path.exists(os.path.join(dir, file)):
-                to_retrieve.append((path, file))
-
-        print(f"{genomes_file} contains {len(files)} files, of which " +
-              f"{len(to_retrieve)} must be downloaded.")
-
-        # Retrieve the files and store them in `dir`.
-        retrieve_files(to_retrieve, dir)
-
-    else:
-        print(f"Error: {dir} was supposed to be a directory.")
+    #  genomes_file = os.path.join(dir, "genomes.txt")
+    try:
+        with open(genomes_file, "r") as f:
+            genomes = f.read()
+    except FileNotFoundError:
+        print(f"Error: Could not open {genomes_file}")
         raise RuntimeError()
+
+    # Take only the nonempty, noncomment lines of the file.
+    lines = list(filter(lambda l: l != "" and l[0] != "#",
+                        map(str.strip,
+                            genomes.splitlines())))
+
+    # The first line contains key=value pairs.
+    attrs_line = lines[0]
+    attrs = dict(map(lambda pair: pair.split("="), attrs_line.split()))
+    # This turns ['a', 'b', 'c', 'd', ...] into [('a', 'b'), ('c', 'd'), ...].
+    files = list(zip(lines[1::2], lines[2::2]))
+
+    # Find the destination directory, creating it if necessary.
+    if attrs["dest_dir"]:
+        dest_dir = attrs["dest_dir"]
+    else:
+        dest_dir = os.path.dirname(genomes_file)
+
+    if not os.path.exists(dest_dir):
+        os.mkdir(dest_dir)
+
+    # Only download files that are not already present in `dest_dir`.
+    to_retrieve = []
+    for (path, file) in files:
+        if not os.path.exists(os.path.join(dest_dir, file)):
+            to_retrieve.append((path, file))
+
+    print(f"{genomes_file} contains {len(files)} files, of which " +
+          f"{len(to_retrieve)} must be downloaded.")
+
+    # Retrieve the files and store them in the destination directory.
+    retrieve_files(to_retrieve, dest_dir)
+
+    return dest_dir
 
 def find_files(dir):
     """Recursively search a directory for `.gb` and `.gbk` files.
